@@ -1,0 +1,75 @@
+package com.example.security;
+
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+public class AuthenticatedUserTest {
+
+    @Test
+    void testUsername_whenUserDetailsPresent() {
+        UserDetails userDetails = mock(UserDetails.class);
+        when(userDetails.getUsername()).thenReturn("john.doe");
+
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(userDetails, null);
+
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        String username = AuthenticatedUser.username();
+
+        assertEquals("john.doe", username);
+    }
+
+    @Test
+    void testUsername_whenJwtTokenPresent() {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("email", "jane.doe@example.com");
+
+        JwtAuthenticationToken token = mock(JwtAuthenticationToken.class);
+        when(token.getTokenAttributes()).thenReturn(claims);
+
+        SecurityContextHolder.getContext().setAuthentication(token);
+
+        String username = AuthenticatedUser.username();
+
+        assertEquals("jane.doe@example.com", username);
+    }
+
+    @Test
+    void testUsername_whenNoAuthentication_thenThrows() {
+        SecurityContextHolder.clearContext();
+
+        assertThrows(AuthenticatedUser.NotAuthenticatedUserException.class,
+                AuthenticatedUser::username);
+    }
+
+    @Test
+    void testExtractRolesFromToken() {
+        Map<String, Object> realmAccess = Map.of("roles", List.of("ROLE_USER", "ROLE_ADMIN"));
+        JwtAuthenticationToken token = mock(JwtAuthenticationToken.class);
+        when(token.getClaims()).thenReturn(Map.of("realm_access", realmAccess));
+
+        List<String> roles = AuthenticatedUser.extractRolesFromToken(token);
+
+        assertTrue(roles.contains("ROLE_USER"));
+        assertTrue(roles.contains("ROLE_ADMIN"));
+    }
+
+    @Test
+    void testExtractAuthoritiesFromAttributes() {
+        Map<String, Object> claims = Map.of("labelRoles", List.of("ADMIN", "USER"));
+
+        List<String> roles = AuthenticatedUser.extractAuthoritiesFromAttributes(claims);
+
+        assertEquals(List.of("ADMIN", "USER"), roles);
+    }
+}
