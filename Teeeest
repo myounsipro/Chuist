@@ -73,3 +73,23 @@ public class AuthenticatedUserTest {
         assertEquals(List.of("ADMIN", "USER"), roles);
     }
 }
+
+/*
+Voici la méthode extractRolesFromToken complète, adaptée au test qu’on a corrigé :
+
+public static List<String> extractRolesFromToken(Jwt jwtToken) {
+    Map<String, Object> claims = jwtToken.getClaims();
+    Map<String, Object> realmAccess = (Map<String, Object>) claims.get("realm_access");
+
+    if (realmAccess == null || !realmAccess.containsKey("roles")) {
+        return List.of();
+    }
+
+    List<String> roles = (List<String>) realmAccess.get("roles");
+
+    return roles.stream()
+                .filter(role -> role.startsWith("ROLE_"))
+                .toList();
+}
+
+*/
