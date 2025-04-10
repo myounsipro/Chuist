@@ -1,95 +1,59 @@
-package com.example.security;
+package com.bnpp.pf.octa.application.service;
 
+;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.*;
+import java.util.List;
 
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-public class AuthenticatedUserTest {
+public class InvoiceApplicationServiceTest {
 
-    @Test
-    void testUsername_whenUserDetailsPresent() {
-        UserDetails userDetails = mock(UserDetails.class);
-        when(userDetails.getUsername()).thenReturn("john.doe");
+    private InvoiceRepository invoiceRepository;
+    private InvoiceApplicationService service;
 
-        UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(userDetails, null);
-
-        SecurityContextHolder.getContext().setAuthentication(auth);
-
-        String username = AuthenticatedUser.username();
-
-        assertEquals("john.doe", username);
+    @BeforeEach
+    void setUp() {
+        invoiceRepository = mock(InvoiceRepository.class);
+        service = new InvoiceApplicationService(invoiceRepository);
     }
 
     @Test
-    void testUsername_whenJwtTokenPresent() {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("email", "jane.doe@example.com");
+    void testGetAllInvoice() {
+        Invoice invoice = mock(Invoice.class);
+        when(invoiceRepository.getAll()).thenReturn(List.of(invoice));
 
-        JwtAuthenticationToken token = mock(JwtAuthenticationToken.class);
-        when(token.getTokenAttributes()).thenReturn(claims);
-
-        SecurityContextHolder.getContext().setAuthentication(token);
-
-        String username = AuthenticatedUser.username();
-
-        assertEquals("jane.doe@example.com", username);
+        List<RestInvoice> result = service.getAllInvoice();
+        assertEquals(1, result.size());
     }
 
     @Test
-    void testUsername_whenNoAuthentication_thenThrows() {
-        SecurityContextHolder.clearContext();
+    void testGetByInvoiceNumber() {
+        String invoiceNumber = "INV-001";
+        Invoice invoice = mock(Invoice.class);
+        when(invoiceRepository.getByInvoiceNumber(invoiceNumber)).thenReturn(List.of(invoice));
 
-        assertThrows(AuthenticatedUser.NotAuthenticatedUserException.class,
-                AuthenticatedUser::username);
+        List<RestInvoice> result = service.getByInvoiceNumber(invoiceNumber);
+        assertEquals(1, result.size());
     }
 
     @Test
-    void testExtractRolesFromToken() {
-        Map<String, Object> realmAccess = Map.of("roles", List.of("ROLE_USER", "ROLE_ADMIN"));
-        JwtAuthenticationToken token = mock(JwtAuthenticationToken.class);
-        when(token.getClaims()).thenReturn(Map.of("realm_access", realmAccess));
+    void testGetLatestInvoices() {
+        PaginationRequest request = mock(PaginationRequest.class);
+        Invoice invoice = mock(Invoice.class);
+        PaginatedResult<Invoice> paginatedInvoices = new PaginatedResult<>(
+                List.of(invoice), 1, 1
+        );
 
-        List<String> roles = AuthenticatedUser.extractRolesFromToken(token);
+        when(invoiceRepository.getLatestInvoices(request)).thenReturn(paginatedInvoices);
 
-        assertTrue(roles.contains("ROLE_USER"));
-        assertTrue(roles.contains("ROLE_ADMIN"));
-    }
+        PaginatedResult<RestInvoice> result = service.getLatestInvoices(request);
 
-    @Test
-    void testExtractAuthoritiesFromAttributes() {
-        Map<String, Object> claims = Map.of("labelRoles", List.of("ADMIN", "USER"));
-
-        List<String> roles = AuthenticatedUser.extractAuthoritiesFromAttributes(claims);
-
-        assertEquals(List.of("ADMIN", "USER"), roles);
+        assertEquals(1, result.totalElements());
+        assertEquals(1, result.totalPages());
+        assertEquals(1, result.content().size());
     }
 }
-
-/*
-Voici la méthode extractRolesFromToken complète, adaptée au test qu’on a corrigé :
-
-public static List<String> extractRolesFromToken(Jwt jwtToken) {
-    Map<String, Object> claims = jwtToken.getClaims();
-    Map<String, Object> realmAccess = (Map<String, Object>) claims.get("realm_access");
-
-    if (realmAccess == null || !realmAccess.containsKey("roles")) {
-        return List.of();
-    }
-
-    List<String> roles = (List<String>) realmAccess.get("roles");
-
-    return roles.stream()
-                .filter(role -> role.startsWith("ROLE_"))
-                .toList();
-}
-
-*/
