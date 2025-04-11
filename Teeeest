@@ -1,79 +1,73 @@
-
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.ResponseEntity;
+import org.mockito.Mockito;
+import org.springframework.http.ProblemDetail;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
+import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class InvoiceControllerTest {
+class BeanValidationErrorsHandlerTest {
 
-    private InvoiceApplicationService invoiceApplicationService;
-    private InvoiceFileApplicationService invoiceFileApplicationService;
-    private InvoiceController controller;
+    private BeanValidationErrorsHandler handler;
 
     @BeforeEach
     void setUp() {
-        invoiceApplicationService = mock(InvoiceApplicationService.class);
-        invoiceFileApplicationService = mock(InvoiceFileApplicationService.class);
-        controller = new InvoiceController(invoiceApplicationService, invoiceFileApplicationService);
+        handler = new BeanValidationErrorsHandler();
     }
 
     @Test
-    void getAllInvoices_shouldReturnList() {
-        List<RestInvoiceFile> invoices = List.of(new RestInvoiceFile(...));
-        when(invoiceApplicationService.getAllInvoice()).thenReturn(invoices);
+    void shouldHandleMethodArgumentNotValidException() {
+        // Arrange
+        BindingResult bindingResult = mock(BindingResult.class);
+        FieldError error1 = new FieldError("object", "email", "must be valid");
+        FieldError error2 = new FieldError("object", "name", "must not be blank");
 
-        List<RestInvoiceFile> result = controller.getAllInvoice();
+        when(bindingResult.getFieldErrors()).thenReturn(List.of(error1, error2));
 
-        assertEquals(invoices, result);
-        verify(invoiceApplicationService).getAllInvoice();
+        MethodArgumentNotValidException exception = new MethodArgumentNotValidException(
+                mock(Method.class), bindingResult);
+
+        // Act
+        ProblemDetail detail = handler.handleConstraintViolationException(exception);
+
+        // Assert
+        assertEquals("Bean validation error", detail.getTitle());
+        Map<String, String> errors = (Map<String, String>) detail.getProperties().get("errors");
+        assertEquals("must be valid", errors.get("email"));
+        assertEquals("must not be blank", errors.get("name"));
     }
 
     @Test
-    void getLatestInvoices_shouldReturnPaginatedResult() {
-        PaginatedResult<RestInvoiceFile> page = new PaginatedResult<>(List.of(new RestInvoiceFile(...)), 1, 0, 10);
-        PaginationRequest request = new PaginationRequest(0, 10);
-        when(invoiceApplicationService.getLatestInvoices(request)).thenReturn(page);
+    void shouldHandleConstraintViolationException() {
+        // Arrange
+        ConstraintViolation<?> violation1 = mock(ConstraintViolation.class);
+        ConstraintViolation<?> violation2 = mock(ConstraintViolation.class);
 
-        var result = controller.getLatestInvoices(0, 10);
+        when(violation1.getPropertyPath()).thenReturn(() -> "dto.email");
+        when(violation1.getMessage()).thenReturn("must be valid");
 
-        assertEquals(page, result);
-        verify(invoiceApplicationService).getLatestInvoices(request);
-    }
+        when(violation2.getPropertyPath()).thenReturn(() -> "dto.name");
+        when(violation2.getMessage()).thenReturn("must not be blank");
 
-    @Test
-    void getByInvoiceNumber_shouldReturnMatchingInvoices() {
-        String invoiceNumber = "INV-001";
-        List<RestInvoiceFile> invoices = List.of(new RestInvoiceFile(...));
-        when(invoiceApplicationService.getByInvoiceNumber(invoiceNumber)).thenReturn(invoices);
+        ConstraintViolationException exception = new ConstraintViolationException(Set.of(violation1, violation2));
 
-        List<RestInvoiceFile> result = controller.getByInvoiceNumber(invoiceNumber);
+        // Act
+        ProblemDetail detail = handler.handleConstraintViolationException(exception);
 
-        assertEquals(invoices, result);
-        verify(invoiceApplicationService).getByInvoiceNumber(invoiceNumber);
-    }
-
-    @Test
-    void getFilteredInvoices_shouldReturnBadRequest_ifPeriodIsMissing() {
-        ResponseEntity<InvoiceFileResponse> response = controller.getFilteredInvoices("", null, null, null, null);
-        assertEquals(400, response.getStatusCodeValue());
-        assertTrue(response.getBody().getError().contains("period"));
-    }
-
-    @Test
-    void getFilteredInvoices_shouldReturnFilteredResult() {
-        String period = "2024-01";
-        RestInvoiceFile match = new RestInvoiceFile(...);
-        List<RestInvoiceFile> all = List.of(match);
-
-        when(invoiceFileApplicationService.getAllInvoice(eq(period), eq(""))).thenReturn(all);
-
-        ResponseEntity<InvoiceFileResponse> response = controller.getFilteredInvoices(period, null, null, null, null);
-
-        assertEquals(200, response.getStatusCodeValue());
-        assertTrue(response.getBody().getInvoices().contains(match));
+        // Assert
+        assertEquals("Bean validation error", detail.getTitle());
+        Map<String, String> errors = (Map<String, String>) detail.getProperties().get("errors");
+        assertEquals("must be valid", errors.get("email"));
+        assertEquals("must not be blank", errors.get("name"));
     }
 }
