@@ -1,44 +1,33 @@
-import org.junit.jupiter.api.Test;
 
-import java.time.Instant;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class NotAfterTimeExceptionTest {
+class AssertionErrorTypeTest {
 
     @Test
-    void strictlyNotAfter_shouldBuildExceptionWithCorrectMessage() {
-        // Given
-        Instant value = Instant.parse("2024-06-01T10:00:00Z");
-        Instant other = Instant.parse("2024-06-01T08:00:00Z");
-        String field = "endDate";
-
-        NotAfterTimeException ex = NotAfterTimeException.strictlyNotAfter()
-                .value(value)
-                .field(field)
-                .other(other);
-
-        // Then
-        String expectedMessage = "Time 2024-06-01T10:00:00Z in \"endDate\" must be strictly after 2024-06-01T08:00:00Z but wasn't.";
-        assertEquals(expectedMessage, ex.getMessage());
-        assertEquals(AssertionErrorType.NOT_AFTER_TIME, ex.type());
+    void shouldContainExpectedEnumValues() {
+        assertNotNull(AssertionErrorType.MISSING_MANDATORY_VALUE);
+        assertNotNull(AssertionErrorType.NOT_AFTER_TIME);
+        assertNotNull(AssertionErrorType.NOT_BEFORE_TIME);
+        assertNotNull(AssertionErrorType.NULL_ELEMENT_IN_COLLECTION);
+        assertNotNull(AssertionErrorType.NUMBER_VALUE_TOO_HIGH);
+        assertNotNull(AssertionErrorType.NUMBER_VALUE_TOO_LOW);
+        assertNotNull(AssertionErrorType.STRING_TOO_LONG);
+        assertNotNull(AssertionErrorType.STRING_TOO_SHORT);
+        assertNotNull(AssertionErrorType.TOO_MANY_ELEMENTS);
     }
 
     @Test
-    void notAfter_shouldBuildExceptionWithCorrectMessage() {
-        // Given
-        Instant value = Instant.parse("2024-05-31T12:00:00Z");
-        Instant other = Instant.parse("2024-06-01T00:00:00Z");
-        String field = "deadline";
+    void shouldReturnCorrectEnumByName() {
+        assertEquals(AssertionErrorType.NOT_AFTER_TIME, AssertionErrorType.valueOf("NOT_AFTER_TIME"));
+        assertEquals(AssertionErrorType.STRING_TOO_SHORT, AssertionErrorType.valueOf("STRING_TOO_SHORT"));
+    }
 
-        NotAfterTimeException ex = NotAfterTimeException.notAfter()
-                .value(value)
-                .field(field)
-                .other(other);
-
-        // Then
-        String expectedMessage = "Time 2024-05-31T12:00:00Z in \"deadline\" must be after 2024-06-01T00:00:00Z but wasn't.";
-        assertEquals(expectedMessage, ex.getMessage());
-        assertEquals(AssertionErrorType.NOT_AFTER_TIME, ex.type());
+    @Test
+    void shouldListAllEnumValues() {
+        AssertionErrorType[] values = AssertionErrorType.values();
+        assertEquals(8, values.length);
+        assertTrue(List.of(values).contains(AssertionErrorType.TOO_MANY_ELEMENTS));
     }
 }
