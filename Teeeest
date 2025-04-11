@@ -1,95 +1,118 @@
 ;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
+import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class SpringDataUserRepositoryTest {
+class SpringDataInvoiceRepositoryTest {
 
-    private JpaUserRepository jpaUserRepository;
-    private UserRepository userRepository;
+    private JpaInvoiceRepository jpaInvoiceRepository;
+    private InvoiceRepository invoiceRepository;
 
     @BeforeEach
     void setUp() {
-        jpaUserRepository = mock(JpaUserRepository.class);
-        userRepository = new SpringDataUserRepository(jpaUserRepository);
+        jpaInvoiceRepository = mock(JpaInvoiceRepository.class);
+        invoiceRepository = new SpringDataInvoiceRepository(jpaInvoiceRepository);
     }
 
     @Test
-    void shouldSaveNewUser_whenIdIsNull() {
-        User user = mock(User.class);
-        when(user.getDbId()).thenReturn(null);
-        UserEntity userEntity = mock(UserEntity.class);
-        when(UserEntity.from(user)).thenReturn(userEntity);
+    void save_shouldDelegateToJpa() {
+        Invoice invoice = mock(Invoice.class);
+        InvoiceEntity entity = mock(InvoiceEntity.class);
 
-        userRepository.save(user);
+        mockStatic(InvoiceEntity.class).when(() -> InvoiceEntity.from(invoice)).thenReturn(entity);
 
-        verify(jpaUserRepository).save(userEntity);
+        invoiceRepository.save(invoice);
+
+        verify(jpaInvoiceRepository).save(entity);
     }
 
     @Test
-    void shouldUpdateExistingUser_whenIdExists() {
-        Long id = 1L;
-        User user = mock(User.class);
-        when(user.getDbId()).thenReturn(id);
+    void getAll_shouldReturnList() {
+        InvoiceEntity entity = mock(InvoiceEntity.class);
+        Invoice invoice = mock(Invoice.class);
 
-        UserEntity existingEntity = mock(UserEntity.class);
-        when(jpaUserRepository.findById(id)).thenReturn(Optional.of(existingEntity));
-        when(user.getAuthorities()).thenReturn(Set.of());
-        when(existingEntity.getAuthorities()).thenReturn(Set.of());
+        when(jpaInvoiceRepository.findAll()).thenReturn(List.of(entity));
+        when(entity.toDomain()).thenReturn(invoice);
 
-        userRepository.save(user);
+        List<Invoice> result = invoiceRepository.getAll();
 
-        verify(existingEntity).updateFromUser(user);
-        verify(jpaUserRepository).saveAndFlush(existingEntity);
+        assertEquals(1, result.size());
+        assertEquals(invoice, result.get(0));
     }
 
     @Test
-    void shouldGetUserByEmail() {
-        UserEmail email = new UserEmail("test@example.com");
-        UserEntity entity = mock(UserEntity.class);
-        User user = mock(User.class);
+    void getByInvoiceNumberAndIssuerKey_shouldReturnInvoice() {
+        String number = "INV001";
+        String issuer = "KEY1";
+        InvoiceEntity entity = mock(InvoiceEntity.class);
+        Invoice invoice = mock(Invoice.class);
 
-        when(jpaUserRepository.findByEmail(email.value())).thenReturn(Optional.of(entity));
-        when(entity.toDomain()).thenReturn(user);
+        when(jpaInvoiceRepository
+            .findTopByInvoiceNumberAndIssuerKeyOrderByInvoiceVersionDesc(number, issuer))
+            .thenReturn(Optional.of(entity));
+        when(entity.toDomain()).thenReturn(invoice);
 
-        Optional<User> result = userRepository.getOneByEmail(email);
+        Optional<Invoice> result = invoiceRepository.getOneByInvoiceNumberAndIssuerKey(number, issuer);
 
         assertTrue(result.isPresent());
-        assertEquals(user, result.get());
+        assertEquals(invoice, result.get());
     }
 
     @Test
-    void shouldGetUserByUserUid() {
-        UserUid uid = new UserUid("uid-123");
-        UserEntity entity = mock(UserEntity.class);
-        User user = mock(User.class);
+    void getByInvoiceNumberAndLatestVersion_shouldReturnInvoice() {
+        String number = "INV002";
+        InvoiceEntity entity = mock(InvoiceEntity.class);
+        Invoice invoice = mock(Invoice.class);
 
-        when(jpaUserRepository.findByUserUid(uid.value())).thenReturn(Optional.of(entity));
-        when(entity.toDomain()).thenReturn(user);
+        when(jpaInvoiceRepository
+            .findTopByInvoiceNumberOrderByInvoiceVersionDesc(number))
+            .thenReturn(Optional.of(entity));
+        when(entity.toDomain()).thenReturn(invoice);
 
-        Optional<User> result = userRepository.getOneByUserUid(uid);
+        Optional<Invoice> result = invoiceRepository.getOneByInvoiceNumberAndLatestVersion(number);
 
         assertTrue(result.isPresent());
-        assertEquals(user, result.get());
+        assertEquals(invoice, result.get());
     }
 
     @Test
-    void shouldGetUserByUserPublicId() {
-        UserPublicId pid = new UserPublicId("public-id");
-        UserEntity entity = mock(UserEntity.class);
-        User user = mock(User.class);
+    void getByInvoiceNumber_shouldReturnList() {
+        String number = "INV003";
+        InvoiceEntity entity = mock(InvoiceEntity.class);
+        Invoice invoice = mock(Invoice.class);
 
-        when(jpaUserRepository.findOneByPublicId(pid.value())).thenReturn(Optional.of(entity));
-        when(entity.toDomain()).thenReturn(user);
+        when(jpaInvoiceRepository.findByInvoiceNumber(number)).thenReturn(List.of(entity));
+        when(entity.toDomain()).thenReturn(invoice);
 
-        Optional<User> result = userRepository.getOneByUserPublicId(pid);
+        List<Invoice> result = invoiceRepository.getByInvoiceNumber(number);
 
-        assertTrue(result.isPresent());
-        assertEquals(user, result.get());
+        assertEquals(1, result.size());
+        assertEquals(invoice, result.get(0));
+    }
+
+    @Test
+    void findLatestInvoices_shouldReturnPaginatedResult() {
+        PaginationRequest paginationRequest = new PaginationRequest(0, 5);
+        InvoiceEntity entity = mock(InvoiceEntity.class);
+        Invoice invoice = mock(Invoice.class);
+        Page<InvoiceEntity> page = new PageImpl<>(List.of(entity), PageRequest.of(0, 5), 1);
+
+        when(jpaInvoiceRepository.findLatestInvoices(PageRequest.of(0, 5))).thenReturn(page);
+        when(entity.toDomain()).thenReturn(invoice);
+
+        PaginatedResult<Invoice> result = invoiceRepository.findLatestInvoices(paginationRequest);
+
+        assertEquals(1, result.elements().size());
+        assertEquals(invoice, result.elements().get(0));
+        assertEquals(1, result.totalElements());
+        assertEquals(1, result.totalPages());
     }
 }
