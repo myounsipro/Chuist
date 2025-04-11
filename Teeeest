@@ -1,85 +1,79 @@
-;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
-import org.springframework.core.io.InputStreamResource;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.ResponseEntity;
 
-import java.io.*;
-import java.nio.file.*;
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class FileDownloadControllerTest {
+class InvoiceControllerTest {
 
-    private InvoiceFileApplicationService service;
-    private FileDownloadController controller;
-
-    private static final String TEMP_DIR = System.getProperty("user.home") + "/BATCH";
+    private InvoiceApplicationService invoiceApplicationService;
+    private InvoiceFileApplicationService invoiceFileApplicationService;
+    private InvoiceController controller;
 
     @BeforeEach
     void setUp() {
-        service = mock(InvoiceFileApplicationService.class);
-        controller = new FileDownloadController(service);
+        invoiceApplicationService = mock(InvoiceApplicationService.class);
+        invoiceFileApplicationService = mock(InvoiceFileApplicationService.class);
+        controller = new InvoiceController(invoiceApplicationService, invoiceFileApplicationService);
     }
 
     @Test
-    void downloadExcelFile_shouldReturnFileSystemResource() throws Exception {
-        // Arrange
-        String invoiceNumber = "INV123";
-        int invoiceVersion = 1;
-        String fileName = "invoice_INV123_V1.xlsx";
-        Path filePath = Paths.get(TEMP_DIR, fileName);
-        Files.createDirectories(filePath.getParent());
-        Files.writeString(filePath, "dummy content");
+    void getAllInvoices_shouldReturnList() {
+        List<RestInvoiceFile> invoices = List.of(new RestInvoiceFile(...));
+        when(invoiceApplicationService.getAllInvoice()).thenReturn(invoices);
 
-        // Act
-        ResponseEntity<FileSystemResource> response = controller.downloadExcelFile(invoiceNumber, invoiceVersion);
+        List<RestInvoiceFile> result = controller.getAllInvoice();
 
-        // Assert
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals(fileName, response.getHeaders().getContentDisposition().getFilename());
-        assertTrue(response.getBody().exists());
-
-        // Cleanup
-        Files.deleteIfExists(filePath);
+        assertEquals(invoices, result);
+        verify(invoiceApplicationService).getAllInvoice();
     }
 
     @Test
-    void downloadZip_shouldReturnZipWithCorrectFilenames() throws Exception {
-        // Arrange
-        Long id1 = 1L;
-        Long id2 = 2L;
-        String f1 = "invoice1.xlsx";
-        String f2 = "invoice2.xlsx";
-        Path path1 = Paths.get(TEMP_DIR, f1);
-        Path path2 = Paths.get(TEMP_DIR, f2);
-        Files.createDirectories(path1.getParent());
-        Files.writeString(path1, "content1");
-        Files.writeString(path2, "content2");
+    void getLatestInvoices_shouldReturnPaginatedResult() {
+        PaginatedResult<RestInvoiceFile> page = new PaginatedResult<>(List.of(new RestInvoiceFile(...)), 1, 0, 10);
+        PaginationRequest request = new PaginationRequest(0, 10);
+        when(invoiceApplicationService.getLatestInvoices(request)).thenReturn(page);
 
-        RestInvoiceFile file1 = new RestInvoiceFile(id1, null, null, null, null, null, null, null, f1.replace(".xlsx", ""), path1.toString());
-        RestInvoiceFile file2 = new RestInvoiceFile(id2, null, null, null, null, null, null, null, f2.replace(".xlsx", ""), path2.toString());
+        var result = controller.getLatestInvoices(0, 10);
 
-        when(service.getInvoiceFileByIds(List.of(id1, id2)))
-                .thenReturn(Map.of(id1, file1, id2, file2));
+        assertEquals(page, result);
+        verify(invoiceApplicationService).getLatestInvoices(request);
+    }
 
-        // Act
-        ResponseEntity<InputStreamResource> response = controller.downloadZip(List.of(id1, id2));
+    @Test
+    void getByInvoiceNumber_shouldReturnMatchingInvoices() {
+        String invoiceNumber = "INV-001";
+        List<RestInvoiceFile> invoices = List.of(new RestInvoiceFile(...));
+        when(invoiceApplicationService.getByInvoiceNumber(invoiceNumber)).thenReturn(invoices);
 
-        // Assert
+        List<RestInvoiceFile> result = controller.getByInvoiceNumber(invoiceNumber);
+
+        assertEquals(invoices, result);
+        verify(invoiceApplicationService).getByInvoiceNumber(invoiceNumber);
+    }
+
+    @Test
+    void getFilteredInvoices_shouldReturnBadRequest_ifPeriodIsMissing() {
+        ResponseEntity<InvoiceFileResponse> response = controller.getFilteredInvoices("", null, null, null, null);
+        assertEquals(400, response.getStatusCodeValue());
+        assertTrue(response.getBody().getError().contains("period"));
+    }
+
+    @Test
+    void getFilteredInvoices_shouldReturnFilteredResult() {
+        String period = "2024-01";
+        RestInvoiceFile match = new RestInvoiceFile(...);
+        List<RestInvoiceFile> all = List.of(match);
+
+        when(invoiceFileApplicationService.getAllInvoice(eq(period), eq(""))).thenReturn(all);
+
+        ResponseEntity<InvoiceFileResponse> response = controller.getFilteredInvoices(period, null, null, null, null);
+
         assertEquals(200, response.getStatusCodeValue());
-        assertEquals("attachment; filename=factures-" + LocalDate.now() + ".zip",
-                response.getHeaders().getFirst("Content-Disposition"));
-        assertNotNull(response.getBody());
-
-        // Cleanup
-        Files.deleteIfExists(path1);
-        Files.deleteIfExists(path2);
+        assertTrue(response.getBody().getInvoices().contains(match));
     }
 }
