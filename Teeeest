@@ -4,38 +4,39 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class NumberValueTooHighExceptionTest {
+class NumberValueTooLowExceptionTest {
 
     @Test
     void shouldBuildExceptionWithCorrectMessageAndParameters() {
-        // Arrange
-        String field = "amount";
-        String max = "1000";
-        String value = "1500";
+        // Given
+        String field = "quantity";
+        String min = "5";
+        String value = "2";
 
-        NumberValueTooHighException ex = NumberValueTooHighException.builder()
+        NumberValueTooLowException ex = NumberValueTooLowException.builder()
                 .field(field)
-                .maxValue(max)
+                .minValue(min)
                 .value(value)
                 .build();
 
-        // Act & Assert
-        assertEquals("Value of field \"amount\" must be at most 1000 but was 1500", ex.getMessage());
+        // Then
+        assertEquals("Value of field \"quantity\" must be at least 5 but was 2", ex.getMessage());
 
-        assertEquals("1000", ex.parameters().get("max"));
-        assertEquals("1500", ex.parameters().get("value"));
+        Map<String, String> params = ex.parameters();
+        assertEquals("5", params.get("min"));
+        assertEquals("2", params.get("value"));
 
-        assertEquals(AssertionErrorType.NUMBER_VALUE_TOO_HIGH, ex.type());
+        assertEquals(AssertionErrorType.NUMBER_VALUE_TOO_LOW, ex.type());
     }
 
     @Test
-    void messageBuilder_shouldReturnExpectedFormat() {
-        var builder = NumberValueTooHighException.builder()
-                .field("testField")
-                .maxValue("10")
-                .value("42");
+    void builderShouldFormatMessageCorrectly() {
+        var builder = NumberValueTooLowException.builder()
+                .field("score")
+                .minValue("10")
+                .value("3");
 
-        String expected = "Value of field \"testField\" must be at most 10 but was 42";
-        assertEquals(expected, builder.message());
+        String expectedMessage = "Value of field \"score\" must be at least 10 but was 3";
+        assertEquals(expectedMessage, builder.message());
     }
 }
