@@ -1,40 +1,39 @@
-
+;
 import org.junit.jupiter.api.Test;
-
-import java.util.Set;
+import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class RestUserTest {
+class RoleTest {
 
     @Test
-    void from_shouldMapUserToRestUser() {
-        // Arrange
-        User user = mock(User.class);
+    void key_shouldReturnPrefixedName() {
+        assertEquals("ROLE_ADMIN", Role.ADMIN.key());
+        assertEquals("ROLE_USER", Role.USER.key());
+        assertEquals("ROLE_UNKNOWN", Role.UNKNOWN.key());
+    }
 
-        when(user.getUserPublicId()).thenReturn(new UserPublicId("public-123"));
-        when(user.getFirstname()).thenReturn(new UserFirstname("Alice"));
-        when(user.getLastName()).thenReturn(new UserLastName("Smith"));
-        when(user.getEmail()).thenReturn(new UserEmail("alice@example.com"));
-        when(user.getUserUid()).thenReturn(new UserUid("uid-456"));
+    @Test
+    void from_shouldReturnMatchingEnum() {
+        try (MockedStatic<Assert> mocked = mockStatic(Assert.class)) {
+            Role result = Role.from("USER");
+            assertEquals(Role.USER, result);
+            mocked.verify(() -> Assert.notBlank("role", "USER"));
+        }
+    }
 
-        Authority authority = new Authority(new AuthorityName("ROLE_USER"));
-        Set<Authority> authorities = Set.of(authority);
-        when(user.getAuthorities()).thenReturn(authorities);
+    @Test
+    void from_shouldReturnUnknownIfNoMatch() {
+        try (MockedStatic<Assert> mocked = mockStatic(Assert.class)) {
+            Role result = Role.from("NON_EXISTING_ROLE");
+            assertEquals(Role.UNKNOWN, result);
+            mocked.verify(() -> Assert.notBlank("role", "NON_EXISTING_ROLE"));
+        }
+    }
 
-        // Act
-        RestUser result = RestUser.from(user);
-
-        // Assert
-        assertEquals("public-123", result.publicId());
-        assertEquals("Alice", result.firstName());
-        assertEquals("Smith", result.lastName());
-        assertEquals("alice@example.com", result.email());
-        assertEquals("uid-456", result.userUid());
-
-        Set<RestAuthority> restAuthorities = result.authorities();
-        assertEquals(1, restAuthorities.size());
-        assertTrue(restAuthorities.stream().anyMatch(a -> a.name().equals("ROLE_USER")));
+    @Test
+    void from_shouldThrowIfNull() {
+        assertThrows(NullPointerException.class, () -> Role.from(null));
     }
 }
