@@ -1,73 +1,95 @@
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.ConstraintViolationException;
+;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.http.ProblemDetail;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 
-import java.lang.reflect.Method;
-import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class BeanValidationErrorsHandlerTest {
+class SpringDataUserRepositoryTest {
 
-    private BeanValidationErrorsHandler handler;
+    private JpaUserRepository jpaUserRepository;
+    private UserRepository userRepository;
 
     @BeforeEach
     void setUp() {
-        handler = new BeanValidationErrorsHandler();
+        jpaUserRepository = mock(JpaUserRepository.class);
+        userRepository = new SpringDataUserRepository(jpaUserRepository);
     }
 
     @Test
-    void shouldHandleMethodArgumentNotValidException() {
-        // Arrange
-        BindingResult bindingResult = mock(BindingResult.class);
-        FieldError error1 = new FieldError("object", "email", "must be valid");
-        FieldError error2 = new FieldError("object", "name", "must not be blank");
+    void shouldSaveNewUser_whenIdIsNull() {
+        User user = mock(User.class);
+        when(user.getDbId()).thenReturn(null);
+        UserEntity userEntity = mock(UserEntity.class);
+        when(UserEntity.from(user)).thenReturn(userEntity);
 
-        when(bindingResult.getFieldErrors()).thenReturn(List.of(error1, error2));
+        userRepository.save(user);
 
-        MethodArgumentNotValidException exception = new MethodArgumentNotValidException(
-                mock(Method.class), bindingResult);
-
-        // Act
-        ProblemDetail detail = handler.handleConstraintViolationException(exception);
-
-        // Assert
-        assertEquals("Bean validation error", detail.getTitle());
-        Map<String, String> errors = (Map<String, String>) detail.getProperties().get("errors");
-        assertEquals("must be valid", errors.get("email"));
-        assertEquals("must not be blank", errors.get("name"));
+        verify(jpaUserRepository).save(userEntity);
     }
 
     @Test
-    void shouldHandleConstraintViolationException() {
-        // Arrange
-        ConstraintViolation<?> violation1 = mock(ConstraintViolation.class);
-        ConstraintViolation<?> violation2 = mock(ConstraintViolation.class);
+    void shouldUpdateExistingUser_whenIdExists() {
+        Long id = 1L;
+        User user = mock(User.class);
+        when(user.getDbId()).thenReturn(id);
 
-        when(violation1.getPropertyPath()).thenReturn(() -> "dto.email");
-        when(violation1.getMessage()).thenReturn("must be valid");
+        UserEntity existingEntity = mock(UserEntity.class);
+        when(jpaUserRepository.findById(id)).thenReturn(Optional.of(existingEntity));
+        when(user.getAuthorities()).thenReturn(Set.of());
+        when(existingEntity.getAuthorities()).thenReturn(Set.of());
 
-        when(violation2.getPropertyPath()).thenReturn(() -> "dto.name");
-        when(violation2.getMessage()).thenReturn("must not be blank");
+        userRepository.save(user);
 
-        ConstraintViolationException exception = new ConstraintViolationException(Set.of(violation1, violation2));
+        verify(existingEntity).updateFromUser(user);
+        verify(jpaUserRepository).saveAndFlush(existingEntity);
+    }
 
-        // Act
-        ProblemDetail detail = handler.handleConstraintViolationException(exception);
+    @Test
+    void shouldGetUserByEmail() {
+        UserEmail email = new UserEmail("test@example.com");
+        UserEntity entity = mock(UserEntity.class);
+        User user = mock(User.class);
 
-        // Assert
-        assertEquals("Bean validation error", detail.getTitle());
-        Map<String, String> errors = (Map<String, String>) detail.getProperties().get("errors");
-        assertEquals("must be valid", errors.get("email"));
-        assertEquals("must not be blank", errors.get("name"));
+        when(jpaUserRepository.findByEmail(email.value())).thenReturn(Optional.of(entity));
+        when(entity.toDomain()).thenReturn(user);
+
+        Optional<User> result = userRepository.getOneByEmail(email);
+
+        assertTrue(result.isPresent());
+        assertEquals(user, result.get());
+    }
+
+    @Test
+    void shouldGetUserByUserUid() {
+        UserUid uid = new UserUid("uid-123");
+        UserEntity entity = mock(UserEntity.class);
+        User user = mock(User.class);
+
+        when(jpaUserRepository.findByUserUid(uid.value())).thenReturn(Optional.of(entity));
+        when(entity.toDomain()).thenReturn(user);
+
+        Optional<User> result = userRepository.getOneByUserUid(uid);
+
+        assertTrue(result.isPresent());
+        assertEquals(user, result.get());
+    }
+
+    @Test
+    void shouldGetUserByUserPublicId() {
+        UserPublicId pid = new UserPublicId("public-id");
+        UserEntity entity = mock(UserEntity.class);
+        User user = mock(User.class);
+
+        when(jpaUserRepository.findOneByPublicId(pid.value())).thenReturn(Optional.of(entity));
+        when(entity.toDomain()).thenReturn(user);
+
+        Optional<User> result = userRepository.getOneByUserPublicId(pid);
+
+        assertTrue(result.isPresent());
+        assertEquals(user, result.get());
     }
 }
