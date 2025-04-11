@@ -2,38 +2,60 @@
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
+import java.util.Collections;
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class RoleTest {
+class RolesTest {
 
     @Test
-    void key_shouldReturnPrefixedName() {
-        assertEquals("ROLE_ADMIN", Role.ADMIN.key());
-        assertEquals("ROLE_USER", Role.USER.key());
-        assertEquals("ROLE_UNKNOWN", Role.UNKNOWN.key());
+    void constructor_shouldWrapUnmodifiableSet() {
+        Set<Role> modifiable = Set.of(Role.USER, Role.ADMIN);
+        Roles roles = new Roles(modifiable);
+
+        assertEquals(2, roles.get().size());
+        assertThrows(UnsupportedOperationException.class, () -> roles.get().add(Role.ANONYMOUS));
     }
 
     @Test
-    void from_shouldReturnMatchingEnum() {
-        try (MockedStatic<Assert> mocked = mockStatic(Assert.class)) {
-            Role result = Role.from("USER");
-            assertEquals(Role.USER, result);
-            mocked.verify(() -> Assert.notBlank("role", "USER"));
+    void hasRole_shouldReturnTrueWhenNonEmpty() {
+        Roles roles = new Roles(Set.of(Role.USER));
+        assertTrue(roles.hasRole());
+    }
+
+    @Test
+    void hasRole_shouldReturnFalseWhenEmpty() {
+        Roles roles = new Roles(Collections.emptySet());
+        assertFalse(roles.hasRole());
+    }
+
+    @Test
+    void hasRoleWithArgument_shouldCallAssertAndCheckMembership() {
+        try (MockedStatic<Assert> mock = mockStatic(Assert.class)) {
+            Roles roles = new Roles(Set.of(Role.ADMIN, Role.USER));
+
+            assertTrue(roles.hasRole(Role.ADMIN));
+            assertFalse(roles.hasRole(Role.ANONYMOUS));
+
+            mock.verify(() -> Assert.notNull("role", Role.ADMIN));
+            mock.verify(() -> Assert.notNull("role", Role.ANONYMOUS));
         }
     }
 
     @Test
-    void from_shouldReturnUnknownIfNoMatch() {
-        try (MockedStatic<Assert> mocked = mockStatic(Assert.class)) {
-            Role result = Role.from("NON_EXISTING_ROLE");
-            assertEquals(Role.UNKNOWN, result);
-            mocked.verify(() -> Assert.notBlank("role", "NON_EXISTING_ROLE"));
-        }
+    void stream_shouldExposeStreamOfRoles() {
+        Roles roles = new Roles(Set.of(Role.USER, Role.ADMIN));
+        assertEquals(2, roles.stream().count());
+        assertTrue(roles.stream().anyMatch(r -> r == Role.USER));
     }
 
     @Test
-    void from_shouldThrowIfNull() {
-        assertThrows(NullPointerException.class, () -> Role.from(null));
+    void EMPTY_shouldBeInstanceOfEmptyRoles() {
+        Roles empty = Roles.EMPTY;
+        assertNotNull(empty);
+        assertTrue(empty.get().isEmpty());
+        assertFalse(empty.hasRole());
     }
 }
