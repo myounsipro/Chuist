@@ -1,67 +1,40 @@
-;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 
-import java.util.List;
+import org.junit.jupiter.api.Test;
+
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class JwtAuthenticationConverterTest {
-
-    private JwtAuthenticationConverter converter;
-
-    @BeforeEach
-    void setUp() {
-        converter = new JwtAuthenticationConverter();
-    }
+class RestUserTest {
 
     @Test
-    void convert_shouldReturnAuthenticationTokenWithAuthorities() {
-        // Given
-        Jwt jwt = mock(Jwt.class);
-        JwtGrantedAuthoritiesConverter springConverter = mock(JwtGrantedAuthoritiesConverter.class);
-        when(springConverter.convert(jwt)).thenReturn(List.of());
+    void from_shouldMapUserToRestUser() {
+        // Arrange
+        User user = mock(User.class);
 
-        List<String> extractedRoles = List.of("ROLE_USER", "ROLE_ADMIN");
+        when(user.getUserPublicId()).thenReturn(new UserPublicId("public-123"));
+        when(user.getFirstname()).thenReturn(new UserFirstname("Alice"));
+        when(user.getLastName()).thenReturn(new UserLastName("Smith"));
+        when(user.getEmail()).thenReturn(new UserEmail("alice@example.com"));
+        when(user.getUserUid()).thenReturn(new UserUid("uid-456"));
 
-        try (MockedStatic<AuthenticatedUser> mockStatic = mockStatic(AuthenticatedUser.class)) {
-            mockStatic.when(() -> AuthenticatedUser.extractRolesFromToken(jwt))
-                      .thenReturn(extractedRoles);
+        Authority authority = new Authority(new AuthorityName("ROLE_USER"));
+        Set<Authority> authorities = Set.of(authority);
+        when(user.getAuthorities()).thenReturn(authorities);
 
-            // When
-            JwtAuthenticationToken result = (JwtAuthenticationToken) converter.convert(jwt);
+        // Act
+        RestUser result = RestUser.from(user);
 
-            // Then
-            assertNotNull(result);
-            assertEquals(jwt, result.getPrincipal());
-            Set<String> authorityNames = result.getAuthorities().stream()
-                                               .map(GrantedAuthority::getAuthority)
-                                               .collect(java.util.stream.Collectors.toSet());
+        // Assert
+        assertEquals("public-123", result.publicId());
+        assertEquals("Alice", result.firstName());
+        assertEquals("Smith", result.lastName());
+        assertEquals("alice@example.com", result.email());
+        assertEquals("uid-456", result.userUid());
 
-            assertTrue(authorityNames.contains("ROLE_USER"));
-            assertTrue(authorityNames.contains("ROLE_ADMIN"));
-        }
-    }
-
-    @Test
-    void convert_shouldHandleEmptyRoles() {
-        Jwt jwt = mock(Jwt.class);
-
-        try (MockedStatic<AuthenticatedUser> mockStatic = mockStatic(AuthenticatedUser.class)) {
-            mockStatic.when(() -> AuthenticatedUser.extractRolesFromToken(jwt))
-                      .thenReturn(List.of());
-
-            JwtAuthenticationToken result = (JwtAuthenticationToken) converter.convert(jwt);
-
-            assertNotNull(result);
-            assertTrue(result.getAuthorities().isEmpty());
-        }
+        Set<RestAuthority> restAuthorities = result.authorities();
+        assertEquals(1, restAuthorities.size());
+        assertTrue(restAuthorities.stream().anyMatch(a -> a.name().equals("ROLE_USER")));
     }
 }
