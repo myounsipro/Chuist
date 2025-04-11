@@ -1,42 +1,44 @@
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
+import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class TooManyElementsExceptionTest {
+class NotBeforeTimeExceptionTest {
 
     @Test
-    void shouldBuildExceptionWithCorrectMessageAndParameters() {
+    void strictlyNotBefore_shouldBuildCorrectException() {
         // Given
-        String field = "items";
-        int maxSize = 3;
-        int currentSize = 5;
+        Instant value = Instant.parse("2024-01-01T10:00:00Z");
+        Instant other = Instant.parse("2024-01-01T12:00:00Z");
+        String field = "startDate";
 
-        TooManyElementsException ex = TooManyElementsException.builder()
+        NotBeforeTimeException ex = NotBeforeTimeException.strictlyNotBefore()
+                .value(value)
                 .field(field)
-                .maxSize(maxSize)
-                .size(currentSize)
-                .build();
+                .other(other);
 
         // Then
-        assertEquals("Size of collection \"items\" must be at most 3 but was 5", ex.getMessage());
-
-        Map<String, String> params = ex.parameters();
-        assertEquals("3", params.get("maxSize"));
-        assertEquals("5", params.get("currentSize"));
-
-        assertEquals(AssertionErrorType.TOO_MANY_ELEMENTS, ex.type());
+        String expectedMsg = "Time 2024-01-01T10:00:00Z in \"startDate\" must be strictly before 2024-01-01T12:00:00Z but wasn't.";
+        assertEquals(expectedMsg, ex.getMessage());
+        assertEquals(AssertionErrorType.NOT_BEFORE_TIME, ex.type());
     }
 
     @Test
-    void builderShouldGenerateCorrectMessage() {
-        var builder = TooManyElementsException.builder()
-                .field("participants")
-                .maxSize(10)
-                .size(14);
+    void notBefore_shouldBuildCorrectException() {
+        // Given
+        Instant value = Instant.parse("2023-12-31T23:59:59Z");
+        Instant other = Instant.parse("2024-01-01T00:00:00Z");
+        String field = "limit";
 
-        String expected = "Size of collection \"participants\" must be at most 10 but was 14";
-        assertEquals(expected, builder.message());
+        NotBeforeTimeException ex = NotBeforeTimeException.notBefore()
+                .value(value)
+                .field(field)
+                .other(other);
+
+        // Then
+        String expectedMsg = "Time 2023-12-31T23:59:59Z in \"limit\" must be before 2024-01-01T00:00:00Z but wasn't.";
+        assertEquals(expectedMsg, ex.getMessage());
+        assertEquals(AssertionErrorType.NOT_BEFORE_TIME, ex.type());
     }
 }
