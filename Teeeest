@@ -4,39 +4,39 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class NumberValueTooLowExceptionTest {
+class TooManyElementsExceptionTest {
 
     @Test
     void shouldBuildExceptionWithCorrectMessageAndParameters() {
         // Given
-        String field = "quantity";
-        String min = "5";
-        String value = "2";
+        String field = "items";
+        int maxSize = 3;
+        int currentSize = 5;
 
-        NumberValueTooLowException ex = NumberValueTooLowException.builder()
+        TooManyElementsException ex = TooManyElementsException.builder()
                 .field(field)
-                .minValue(min)
-                .value(value)
+                .maxSize(maxSize)
+                .size(currentSize)
                 .build();
 
         // Then
-        assertEquals("Value of field \"quantity\" must be at least 5 but was 2", ex.getMessage());
+        assertEquals("Size of collection \"items\" must be at most 3 but was 5", ex.getMessage());
 
         Map<String, String> params = ex.parameters();
-        assertEquals("5", params.get("min"));
-        assertEquals("2", params.get("value"));
+        assertEquals("3", params.get("maxSize"));
+        assertEquals("5", params.get("currentSize"));
 
-        assertEquals(AssertionErrorType.NUMBER_VALUE_TOO_LOW, ex.type());
+        assertEquals(AssertionErrorType.TOO_MANY_ELEMENTS, ex.type());
     }
 
     @Test
-    void builderShouldFormatMessageCorrectly() {
-        var builder = NumberValueTooLowException.builder()
-                .field("score")
-                .minValue("10")
-                .value("3");
+    void builderShouldGenerateCorrectMessage() {
+        var builder = TooManyElementsException.builder()
+                .field("participants")
+                .maxSize(10)
+                .size(14);
 
-        String expectedMessage = "Value of field \"score\" must be at least 10 but was 3";
-        assertEquals(expectedMessage, builder.message());
+        String expected = "Size of collection \"participants\" must be at most 10 but was 14";
+        assertEquals(expected, builder.message());
     }
 }
