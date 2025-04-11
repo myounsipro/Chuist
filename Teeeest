@@ -1,68 +1,95 @@
-
 ;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtClaimNames;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 
-import java.time.Instant;
-import java.util.*;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class WebSsoJwtHelperTest {
+class UserDetailsServiceDevTest {
 
-    private WebSsoJwtHelper helper;
-    private final String issuer = "https://sso.example.com";
+    @Mock
+    private WebSsoJwtHelper webSsoJwtHelper;
+
+    @Mock
+    private Oauth2ResourceServerUserInfoService userInfoService;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private SecurityContext securityContext;
+
+    @Mock
+    private JwtAuthenticationToken jwtAuthToken;
+
+    private UserDetailsServiceDev userDetailsService;
 
     @BeforeEach
     void setUp() {
-        helper = new WebSsoJwtHelper(issuer);
+        MockitoAnnotations.openMocks(this);
+        userDetailsService = new UserDetailsServiceDev(webSsoJwtHelper, userInfoService, userRepository);
+        SecurityContextHolder.setContext(securityContext);
     }
 
     @Test
-    void isWebSsoJwt_shouldReturnTrue_whenIssuerMatches() {
-        JwtAuthenticationToken token = mock(JwtAuthenticationToken.class);
-        Jwt jwt = buildJwtWithIssuer(issuer);
-        when(token.getToken()).thenReturn(jwt);
-
-        assertTrue(helper.isWebSsoJwt(token));
-    }
-
-    @Test
-    void isWebSsoJwt_shouldReturnFalse_whenIssuerDiffers() {
-        JwtAuthenticationToken token = mock(JwtAuthenticationToken.class);
-        Jwt jwt = buildJwtWithIssuer("wrong-issuer");
-        when(token.getToken()).thenReturn(jwt);
-
-        assertFalse(helper.isWebSsoJwt(token));
-    }
-
-    @Test
-    void webSsoAuthorities_shouldReturnCombinedAuthorities() {
-        JwtAuthenticationToken token = mock(JwtAuthenticationToken.class);
-        Map<String, Object> attributes = Map.of(
-            "roles", List.of("READ", "WRITE")
+    void loadUserByUsername_shouldReturnUserDetails_whenWebSsoJwt() {
+        // Given
+        String username = "anyUser";
+        when(securityContext.getAuthentication()).thenReturn(jwtAuthToken);
+        when(webSsoJwtHelper.isWebSsoJwt(jwtAuthToken)).thenReturn(true);
+        when(webSsoJwtHelper.webSsoAuthorities(jwtAuthToken)).thenReturn(
+                Set.of(() -> "OCTA_READ", () -> "OCTA_WRITE")
         );
-        when(token.getAuthorities()).thenReturn(Set.of(new SimpleGrantedAuthority("EXISTING")));
-        when(token.getTokenAttributes()).thenReturn(attributes);
 
-        Set<GrantedAuthority> result = helper.webSsoAuthorities(token);
+        // When
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-        assertEquals(3, result.size());
-        assertTrue(result.contains(new SimpleGrantedAuthority("EXISTING")));
-        assertTrue(result.contains(new SimpleGrantedAuthority("BASE_HABI_READ")));
-        assertTrue(result.contains(new SimpleGrantedAuthority("BASE_HABI_WRITE")));
+        // Then
+        assertEquals(username, userDetails.getUsername());
+        assertTrue(userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("OCTA_READ")));
+        assertTrue(userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("OCTA_WRITE")));
     }
 
-    private Jwt buildJwtWithIssuer(String issuerValue) {
-        Map<String, Object> headers = Map.of("alg", "none");
-        Map<String, Object> claims = Map.of(JwtClaimNames.ISS, issuerValue);
-        Instant now = Instant.now();
-        return new Jwt("tokenValue", now, now.plusSeconds(3600), headers, claims);
+    @Test
+    void loadUserByUsername_shouldReturnUserDetails_whenFallbackUser() {
+        // Given
+        String username = "myUser1";
+        when(securityContext.getAuthentication()).thenReturn(mock(Authentication.class));
+
+        // When
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+        // Then
+        assertEquals("myUser1", userDetails.getUsername());
+        assertTrue(userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("OCTA_READ")));
+        assertTrue(userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("OCTA_WRITE")));
+        assertTrue(userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("USER")));
+        assertEquals("{noop}myPwdForUser1", userDetails.getPassword());
+    }
+
+    @Test
+    void loadUserByUsername_shouldThrowException_whenUserNotFound() {
+        // Given
+        String username = "unknownUser";
+        when(securityContext.getAuthentication()).thenReturn(mock(Authentication.class));
+
+        // Then
+        assertThrows(
+                org.springframework.security.core.userdetails.UsernameNotFoundException.class,
+                () -> userDetailsService.loadUserByUsername(username)
+        );
     }
 }
