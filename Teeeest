@@ -1,40 +1,48 @@
-@Test
-void syncWithIdp_shouldUpdateExistingUser_ifAuthoritiesDiffer() {
-    Jwt jwt = mock(Jwt.class);
-    Map<String, Object> claims = Map.of("claimKey", "claimValue");
-    when(jwt.getClaims()).thenReturn(claims);
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.security.oauth2.jwt.Jwt;
 
-    // Prépare les autorités réelles
-    Authority authorityUser = new Authority(new AuthorityName("ROLE_USER"));
-    Authority authorityAdmin = new Authority(new AuthorityName("ROLE_ADMIN"));
-    Set<Authority> authoritiesUser = Set.of(authorityUser);
-    Set<Authority> authoritiesAdmin = Set.of(authorityAdmin);
+import java.util.*;
 
-    User incomingUser = mock(User.class);
-    when(incomingUser.getEmail()).thenReturn("test@example.com");
-    when(incomingUser.getAuthorities()).thenReturn(authoritiesUser);
+import static org.mockito.Mockito.*;
 
-    User existingUser = mock(User.class);
-    when(existingUser.getAuthorities()).thenReturn(authoritiesAdmin);
+class UserSynchronizerTest {
 
-    when(userRepository.getOneByEmail("test@example.com"))
-            .thenReturn(Optional.of(existingUser));
+    private UserRepository userRepository;
+    private UserSynchronizer userSynchronizer;
 
-    try (
-        MockedStatic<AuthenticatedUser> staticAuth = mockStatic(AuthenticatedUser.class);
-        MockedStatic<User> staticUser = mockStatic(User.class)
-    ) {
-        staticAuth.when(() ->
-            AuthenticatedUser.extractAuthoritiesFromAttributes(claims)
-        ).thenReturn(List.of("ROLE_USER"));
-
-        staticUser.when(() ->
-            User.fromTokenUserInfo(any(), eq(List.of("ROLE_USER")))
-        ).thenReturn(incomingUser);
-
-        userSynchronizer.syncWithIdp(jwt, claims);
+    @BeforeEach
+    void setup() {
+        userRepository = mock(UserRepository.class);
+        userSynchronizer = new UserSynchronizer(userRepository);
     }
 
-    verify(existingUser).updateFromUser(incomingUser, authoritiesUser);
-    verify(userRepository).save(existingUser);
+    @Test
+    void syncWithIdp_shouldUpdateExistingUser_ifAuthoritiesDiffer() {
+        // Fake JWT token
+        Jwt jwt = mock(Jwt.class);
+        Map<String, Object> claims = Map.of("email", "user@test.com");
+        when(jwt.getClaims()).thenReturn(claims);
+
+        // Simule les rôles du token
+        List<String> rolesFromToken = List.of("ROLE_USER");
+
+        // Utilisateur extrait du token
+        User userFromToken = User.fromTokenUserInfo(claims, rolesFromToken);
+
+        // Utilisateur existant avec un autre rôle
+        User existingUser = new User();
+        existingUser.setEmail(new UserEmail("user@test.com"));
+        existingUser.setAuthorities(Set.of(new Authority(new AuthorityName("ROLE_ADMIN"))));
+
+        when(userRepository.getOneByEmail(new UserEmail("user@test.com")))
+                .thenReturn(Optional.of(existingUser));
+
+        // Exécute
+        userSynchronizer.syncWithIdp(jwt, claims);
+
+        // Vérifie la mise à jour
+        assert existingUser.getAuthorities().contains(new Authority(new AuthorityName("ROLE_USER")));
+        verify(userRepository).save(existingUser);
+    }
 }
