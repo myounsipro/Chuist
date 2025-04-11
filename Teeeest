@@ -1,61 +1,63 @@
-;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.MockedStatic;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.oauth2.jwt.JwtClaimNames;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
-import java.util.Collections;
-import java.util.Set;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class RolesTest {
+class WebSsoJwtHelperTest {
 
-    @Test
-    void constructor_shouldWrapUnmodifiableSet() {
-        Set<Role> modifiable = Set.of(Role.USER, Role.ADMIN);
-        Roles roles = new Roles(modifiable);
+    private WebSsoJwtHelper helper;
+    private final String issuer = "https://sso.example.com";
 
-        assertEquals(2, roles.get().size());
-        assertThrows(UnsupportedOperationException.class, () -> roles.get().add(Role.ANONYMOUS));
+    @BeforeEach
+    void setUp() {
+        helper = new WebSsoJwtHelper(issuer);
     }
 
     @Test
-    void hasRole_shouldReturnTrueWhenNonEmpty() {
-        Roles roles = new Roles(Set.of(Role.USER));
-        assertTrue(roles.hasRole());
+    void isWebSsoJwt_shouldReturnTrue_whenIssuerMatches() {
+        JwtAuthenticationToken token = mock(JwtAuthenticationToken.class);
+        when(token.getToken()).thenReturn(mockTokenWithIssuer(issuer));
+
+        assertTrue(helper.isWebSsoJwt(token));
     }
 
     @Test
-    void hasRole_shouldReturnFalseWhenEmpty() {
-        Roles roles = new Roles(Collections.emptySet());
-        assertFalse(roles.hasRole());
+    void isWebSsoJwt_shouldReturnFalse_whenIssuerIsDifferent() {
+        JwtAuthenticationToken token = mock(JwtAuthenticationToken.class);
+        when(token.getToken()).thenReturn(mockTokenWithIssuer("wrong-issuer"));
+
+        assertFalse(helper.isWebSsoJwt(token));
     }
 
     @Test
-    void hasRoleWithArgument_shouldCallAssertAndCheckMembership() {
-        try (MockedStatic<Assert> mock = mockStatic(Assert.class)) {
-            Roles roles = new Roles(Set.of(Role.ADMIN, Role.USER));
+    void webSsoAuthorities_shouldReturnCombinedAuthorities() {
+        JwtAuthenticationToken token = mock(JwtAuthenticationToken.class);
 
-            assertTrue(roles.hasRole(Role.ADMIN));
-            assertFalse(roles.hasRole(Role.ANONYMOUS));
+        Map<String, Object> attributes = Map.of(
+            "roles", List.of("READ", "WRITE")
+        );
+        when(token.getAuthorities()).thenReturn(Set.of(new SimpleGrantedAuthority("EXISTING")));
+        when(token.getTokenAttributes()).thenReturn(attributes);
 
-            mock.verify(() -> Assert.notNull("role", Role.ADMIN));
-            mock.verify(() -> Assert.notNull("role", Role.ANONYMOUS));
-        }
+        Set<GrantedAuthority> result = helper.webSsoAuthorities(token);
+
+        assertEquals(3, result.size());
+        assertTrue(result.contains(new SimpleGrantedAuthority("EXISTING")));
+        assertTrue(result.contains(new SimpleGrantedAuthority("BASE_HABI_READ")));
+        assertTrue(result.contains(new SimpleGrantedAuthority("BASE_HABI_WRITE")));
     }
 
-    @Test
-    void stream_shouldExposeStreamOfRoles() {
-        Roles roles = new Roles(Set.of(Role.USER, Role.ADMIN));
-        assertEquals(2, roles.stream().count());
-        assertTrue(roles.stream().anyMatch(r -> r == Role.USER));
-    }
-
-    @Test
-    void EMPTY_shouldBeInstanceOfEmptyRoles() {
-        Roles empty = Roles.EMPTY;
-        assertNotNull(empty);
-        assertTrue(empty.get().isEmpty());
-        assertFalse(empty.hasRole());
+    private Jwt mockTokenWithIssuer(String issuerValue) {
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getClaimAsString(JwtClaimNames.ISS)).thenReturn(issuerValue);
+        return jwt;
     }
 }
