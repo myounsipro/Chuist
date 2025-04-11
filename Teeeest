@@ -1,86 +1,66 @@
-
+;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-class UserTest {
+class InvoiceFileControllerTest {
 
-    @Test
-    void fromTokenUserInfo_should_map_fields_correctly_with_all_claims_present() {
-        Map<String, Object> claims = Map.of(
-                "sub", "abc-123",
-                "preferred_username", "john.doe",
-                "given_name", "John",
-                "family_name", "Doe",
-                "email", "john.doe@example.com"
-        );
+    private InvoiceFileApplicationService invoiceFileApplicationService;
+    private InvoiceFileController controller;
 
-        List<String> roles = List.of("ROLE_USER", "ROLE_ADMIN");
-
-        User user = User.fromTokenUserInfo(claims, roles);
-
-        assertEquals(new UserEmail("john.doe@example.com"), user.getEmail());
-        assertEquals(new UserFirstname("John"), user.getFirstname());
-        assertEquals(new UserLastname("Doe"), user.getLastName());
-        assertEquals(new UserUid("abc-123"), user.getUserUid());
-
-        Set<Authority> expectedAuthorities = Set.of(
-                new Authority(new AuthorityName("ROLE_USER")),
-                new Authority(new AuthorityName("ROLE_ADMIN"))
-        );
-
-        assertEquals(expectedAuthorities, user.getAuthorities());
+    @BeforeEach
+    void setUp() {
+        invoiceFileApplicationService = mock(InvoiceFileApplicationService.class);
+        controller = new InvoiceFileController(invoiceFileApplicationService);
     }
 
     @Test
-    void fromTokenUserInfo_should_fallback_to_sub_as_email_if_email_missing() {
-        Map<String, Object> claims = Map.of(
-                "sub", "abc-123"
-        );
+    void getAllInvoiceFiles_shouldReturnList() {
+        List<RestInvoiceFile> mockList = List.of(new RestInvoiceFile(), new RestInvoiceFile());
+        when(invoiceFileApplicationService.getAllInvoice()).thenReturn(mockList);
 
-        List<String> roles = List.of("ROLE_USER");
+        List<RestInvoiceFile> result = controller.getAllInvoiceFile();
 
-        User user = User.fromTokenUserInfo(claims, roles);
-
-        assertEquals(new UserEmail("abc-123"), user.getEmail());
-        assertEquals(new UserUid("abc-123"), user.getUserUid());
-        assertEquals(Set.of(new Authority(new AuthorityName("ROLE_USER"))), user.getAuthorities());
+        assertEquals(mockList, result);
+        verify(invoiceFileApplicationService).getAllInvoice();
     }
 
     @Test
-    void fromTokenUserInfo_should_use_username_when_email_and_sub_are_unusable() {
-        Map<String, Object> claims = Map.of(
-                "sub", "user123",
-                "preferred_username", "someuser@example.com"
-        );
+    void getLatestInvoiceFiles_shouldReturnPaginatedResult() {
+        PaginatedResult<RestInvoiceFile> mockPage = new PaginatedResult<>(List.of(new RestInvoiceFile()), 1, 0, 10);
+        when(invoiceFileApplicationService.getLatestInvoiceFiles(new PaginationRequest(0, 10)))
+            .thenReturn(mockPage);
 
-        List<String> roles = List.of();
+        var result = controller.getLatestInvoiceFiles(0, 10);
 
-        User user = User.fromTokenUserInfo(claims, roles);
-
-        assertEquals(new UserEmail("someuser@example.com"), user.getEmail());
-        assertEquals(new UserUid("user123"), user.getUserUid());
+        assertEquals(mockPage, result);
+        verify(invoiceFileApplicationService).getLatestInvoiceFiles(new PaginationRequest(0, 10));
     }
 
     @Test
-    void fromTokenUserInfo_should_handle_missing_names_gracefully() {
-        Map<String, Object> claims = Map.of(
-                "sub", "uid-001",
-                "email", "anonymous@example.com"
-        );
+    void getByInvoiceNumber_shouldReturnList() {
+        String invoiceNumber = "INV123";
+        List<RestInvoiceFile> mockResult = List.of(new RestInvoiceFile());
+        when(invoiceFileApplicationService.getByInvoiceNumber(invoiceNumber)).thenReturn(mockResult);
 
-        List<String> roles = List.of();
+        List<RestInvoiceFile> result = controller.getByInvoiceNumber(invoiceNumber);
 
-        User user = User.fromTokenUserInfo(claims, roles);
+        assertEquals(mockResult, result);
+        verify(invoiceFileApplicationService).getByInvoiceNumber(invoiceNumber);
+    }
 
-        assertNull(user.getFirstname());
-        assertNull(user.getLastName());
-        assertEquals(new UserEmail("anonymous@example.com"), user.getEmail());
-        assertEquals(new UserUid("uid-001"), user.getUserUid());
-        assertTrue(user.getAuthorities().isEmpty());
+    @Test
+    void getFilters_shouldReturnInvoiceFilter() {
+        InvoiceFilter filter = new InvoiceFilter(); // adapt if needed
+        when(invoiceFileApplicationService.getFilters()).thenReturn(filter);
+
+        InvoiceFilter result = controller.getFilters();
+
+        assertEquals(filter, result);
+        verify(invoiceFileApplicationService).getFilters();
     }
 }
