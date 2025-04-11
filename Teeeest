@@ -1,56 +1,77 @@
-package com.bnpp.pf.octa.application.service;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.*;
+public class InvoiceLineEntityTest {
 
-public class InvoiceApplicationServiceTest {
+    @Test
+    void testFrom() {
+        InvoiceLine invoiceLine = mock(InvoiceLine.class);
+        when(invoiceLine.getId()).thenReturn(1L);
+        when(invoiceLine.getInvoiceId()).thenReturn(100L);
+        when(invoiceLine.getFinancialCompany()).thenReturn("TestCompany");
+        when(invoiceLine.getTotalVat()).thenReturn(99.99);
+        when(invoiceLine.getNumberOfFiles()).thenReturn(5);
 
-    private InvoiceReaderWriter invoiceReaderWriter;
-    private InvoiceApplicationService service;
+        InvoiceLineEntity entity = InvoiceLineEntity.from(invoiceLine);
 
-    @BeforeEach
-    void setUp() {
-        invoiceReaderWriter = mock(InvoiceReaderWriter.class);
-        service = new InvoiceApplicationService(invoiceReaderWriter);
+        assertEquals(1L, entity.getEntityId());
+        assertEquals(100L, entity.getEntityInvoiceId());
+        assertEquals("TestCompany", entity.getEntityFinancialCompany());
+        assertEquals(99.99, entity.getEntityTotalVat());
+        assertEquals(5, entity.getEntityNumberOfFiles());
     }
 
     @Test
-    void testGetAllInvoice() {
-        Invoice invoice = mock(Invoice.class);
-        when(invoiceReaderWriter.getAll()).thenReturn(List.of(invoice));
+    void testToDomain() {
+        InvoiceLineEntity entity = new InvoiceLineEntity();
+        entity.setEntityId(2L);
+        entity.setEntityInvoiceId(200L);
+        entity.setEntityFinancialCompany("AnotherCompany");
+        entity.setEntityTotalVat(49.99);
+        entity.setEntityNumberOfFiles(3);
 
-        List<RestInvoice> result = service.getAllInvoice();
-        assertEquals(1, result.size());
+        InvoiceLine domain = InvoiceLineEntity.toDomain(entity);
+
+        assertEquals(2L, domain.getId());
+        assertEquals(200L, domain.getInvoiceId());
+        assertEquals("AnotherCompany", domain.getFinancialCompany());
+        assertEquals(49.99, domain.getTotalVat());
+        assertEquals(3, domain.getNumberOfFiles());
     }
 
     @Test
-    void testGetByInvoiceNumber() {
-        String invoiceNumber = "INV-001";
-        Invoice invoice = mock(Invoice.class);
-        when(invoiceReaderWriter.getByInvoiceNumber(invoiceNumber)).thenReturn(List.of(invoice));
+    void testFromList() {
+        InvoiceLine invoiceLine = mock(InvoiceLine.class);
+        when(invoiceLine.getId()).thenReturn(1L);
+        when(invoiceLine.getInvoiceId()).thenReturn(100L);
+        when(invoiceLine.getFinancialCompany()).thenReturn("TestCompany");
+        when(invoiceLine.getTotalVat()).thenReturn(99.99);
+        when(invoiceLine.getNumberOfFiles()).thenReturn(5);
 
-        List<RestInvoice> result = service.getByInvoiceNumber(invoiceNumber);
-        assertEquals(1, result.size());
+        List<InvoiceLineEntity> entities = InvoiceLineEntity.fromList(List.of(invoiceLine));
+
+        assertEquals(1, entities.size());
+        InvoiceLineEntity entity = entities.get(0);
+        assertEquals(1L, entity.getEntityId());
     }
 
     @Test
-    void testGetLatestInvoices() {
-        PaginationRequest request = mock(PaginationRequest.class);
-        Invoice invoice = mock(Invoice.class);
-        PaginatedResult<Invoice> paginatedInvoices = new PaginatedResult<>(List.of(invoice), 1, 1);
+    void testToDomainList() {
+        InvoiceLineEntity entity = new InvoiceLineEntity();
+        entity.setEntityId(2L);
+        entity.setEntityInvoiceId(200L);
+        entity.setEntityFinancialCompany("AnotherCompany");
+        entity.setEntityTotalVat(49.99);
+        entity.setEntityNumberOfFiles(3);
 
-        when(invoiceReaderWriter.getLatestInvoices(request)).thenReturn(paginatedInvoices);
+        List<InvoiceLine> domainList = InvoiceLineEntity.toDomainList(List.of(entity));
 
-        PaginatedResult<RestInvoice> result = service.getLatestInvoices(request);
-
-        assertEquals(1, result.totalElements());
-        assertEquals(1, result.totalPages());
-        assertEquals(1, result.content().size());
+        assertEquals(1, domainList.size());
+        InvoiceLine domain = domainList.get(0);
+        assertEquals("AnotherCompany", domain.getFinancialCompany());
     }
 }
