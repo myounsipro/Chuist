@@ -1,70 +1,52 @@
 
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Set;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+class InvoiceLineReaderWriterTest {
 
-class UserDetailsServiceImplTest {
-
-    @Mock
-    private WebSsoJwtHelper webSsoJwtHelper;
-
-    @Mock
-    private SecurityContext securityContext;
-
-    @Mock
-    private JwtAuthenticationToken jwtAuthenticationToken;
-
-    private UserDetailsServiceImpl userDetailsService;
+    private InvoiceLineRepository invoiceLineRepository;
+    private InvoiceLineReaderWriter invoiceLineReaderWriter;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
-        userDetailsService = new UserDetailsServiceImpl(webSsoJwtHelper);
-        SecurityContextHolder.setContext(securityContext);
+        invoiceLineRepository = mock(InvoiceLineRepository.class);
+        invoiceLineReaderWriter = new InvoiceLineReaderWriter(invoiceLineRepository);
     }
 
     @Test
-    void loadUserByUsername_shouldReturnUserDetails_whenWebSsoJwtValid() {
-        // Given
-        String username = "webssoUser";
-        when(securityContext.getAuthentication()).thenReturn(jwtAuthenticationToken);
-        when(webSsoJwtHelper.isWebSsoJwt(jwtAuthenticationToken)).thenReturn(true);
-        Set<GrantedAuthority> authorities = Set.of(() -> "OCTA_READ");
-        when(webSsoJwtHelper.webSsoAuthorities(jwtAuthenticationToken)).thenReturn(authorities);
+    void save_shouldDelegateToRepository() {
+        InvoiceLine invoiceLine = mock(InvoiceLine.class);
 
-        // When
-        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        invoiceLineReaderWriter.save(invoiceLine);
 
-        // Then
-        assertEquals(username, userDetails.getUsername());
-        assertTrue(userDetails.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("OCTA_READ")));
+        verify(invoiceLineRepository).save(invoiceLine);
     }
 
     @Test
-    void loadUserByUsername_shouldThrowException_whenNotWebSso() {
-        // Given
-        String username = "notFoundUser";
-        when(securityContext.getAuthentication()).thenReturn(mock(Authentication.class));
+    void getAll_shouldReturnListFromRepository() {
+        List<InvoiceLine> expected = List.of(mock(InvoiceLine.class));
+        when(invoiceLineRepository.getAll()).thenReturn(expected);
 
-        // Then
-        assertThrows(
-                org.springframework.security.core.userdetails.UsernameNotFoundException.class,
-                () -> userDetailsService.loadUserByUsername(username)
-        );
+        List<InvoiceLine> result = invoiceLineReaderWriter.getAll();
+
+        assertEquals(expected, result);
+        verify(invoiceLineRepository).getAll();
+    }
+
+    @Test
+    void getByInvoiceId_shouldReturnMatchingLines() {
+        Long invoiceId = 123L;
+        List<InvoiceLine> expected = List.of(mock(InvoiceLine.class));
+        when(invoiceLineRepository.getOneByInvoiceId(invoiceId)).thenReturn(expected);
+
+        List<InvoiceLine> result = invoiceLineReaderWriter.getByInvoiceId(invoiceId);
+
+        assertEquals(expected, result);
+        verify(invoiceLineRepository).getOneByInvoiceId(invoiceId);
     }
 }
