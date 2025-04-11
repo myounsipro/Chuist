@@ -1,11 +1,14 @@
-import org.junit.jupiter.api.Test;
+
+;
 import org.junit.jupiter.api.BeforeEach;
-import org.mockito.MockedStatic;
+import org.junit.jupiter.api.Test;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtClaimNames;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
+import java.time.Instant;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -24,15 +27,17 @@ class WebSsoJwtHelperTest {
     @Test
     void isWebSsoJwt_shouldReturnTrue_whenIssuerMatches() {
         JwtAuthenticationToken token = mock(JwtAuthenticationToken.class);
-        when(token.getToken()).thenReturn(mockTokenWithIssuer(issuer));
+        Jwt jwt = buildJwtWithIssuer(issuer);
+        when(token.getToken()).thenReturn(jwt);
 
         assertTrue(helper.isWebSsoJwt(token));
     }
 
     @Test
-    void isWebSsoJwt_shouldReturnFalse_whenIssuerIsDifferent() {
+    void isWebSsoJwt_shouldReturnFalse_whenIssuerDiffers() {
         JwtAuthenticationToken token = mock(JwtAuthenticationToken.class);
-        when(token.getToken()).thenReturn(mockTokenWithIssuer("wrong-issuer"));
+        Jwt jwt = buildJwtWithIssuer("wrong-issuer");
+        when(token.getToken()).thenReturn(jwt);
 
         assertFalse(helper.isWebSsoJwt(token));
     }
@@ -40,7 +45,6 @@ class WebSsoJwtHelperTest {
     @Test
     void webSsoAuthorities_shouldReturnCombinedAuthorities() {
         JwtAuthenticationToken token = mock(JwtAuthenticationToken.class);
-
         Map<String, Object> attributes = Map.of(
             "roles", List.of("READ", "WRITE")
         );
@@ -55,9 +59,10 @@ class WebSsoJwtHelperTest {
         assertTrue(result.contains(new SimpleGrantedAuthority("BASE_HABI_WRITE")));
     }
 
-    private Jwt mockTokenWithIssuer(String issuerValue) {
-        Jwt jwt = mock(Jwt.class);
-        when(jwt.getClaimAsString(JwtClaimNames.ISS)).thenReturn(issuerValue);
-        return jwt;
+    private Jwt buildJwtWithIssuer(String issuerValue) {
+        Map<String, Object> headers = Map.of("alg", "none");
+        Map<String, Object> claims = Map.of(JwtClaimNames.ISS, issuerValue);
+        Instant now = Instant.now();
+        return new Jwt("tokenValue", now, now.plusSeconds(3600), headers, claims);
     }
 }
