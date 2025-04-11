@@ -1,15 +1,24 @@
+package com.bnpp.pf.octa.infrastructure.entity;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.bnpp.pf.octa.domain.invoice.aggregate.InvoiceLine;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 public class InvoiceLineEntityTest {
 
-    @Test
-    void testFrom() {
-        InvoiceLine invoiceLine = mock(InvoiceLine.class);
+    private InvoiceLine invoiceLine;
+    private InvoiceLineEntity entity;
+
+    @BeforeEach
+    void setup() {
+        invoiceLine = mock(InvoiceLine.class);
+
+        // Champs généraux
         when(invoiceLine.getId()).thenReturn(1L);
         when(invoiceLine.getInvoiceId()).thenReturn(100L);
         when(invoiceLine.getFinancialCompany()).thenReturn("CompanyX");
@@ -18,19 +27,27 @@ public class InvoiceLineEntityTest {
         when(invoiceLine.getSubConventionType()).thenReturn("TypeA");
         when(invoiceLine.getAmendment()).thenReturn("Amend-01");
         when(invoiceLine.getMandate()).thenReturn("Mand-2025");
+
+        // Produit / garantie
         when(invoiceLine.getInsuranceOptionOrRisk()).thenReturn("OptionA");
         when(invoiceLine.getProductLabel()).thenReturn("Product A");
         when(invoiceLine.getProductCode()).thenReturn("P123");
+
+        // Primes et TVA
         when(invoiceLine.getTotalPremiumIncludingTax()).thenReturn(1000.0);
         when(invoiceLine.getTotalPremiumExcludingTax()).thenReturn(800.0);
         when(invoiceLine.getTotalVat()).thenReturn(200.0);
         when(invoiceLine.getNumberOfFiles()).thenReturn(2);
+
+        // Commissions
         when(invoiceLine.getUnitCommissionPerFile()).thenReturn(10.0);
         when(invoiceLine.getManagementCommissionRate()).thenReturn(5.0);
         when(invoiceLine.getManagementCommission()).thenReturn(50.0);
         when(invoiceLine.getBrokerageCommissionRate()).thenReturn(7.5);
         when(invoiceLine.getBrokerageCommission()).thenReturn(75.0);
         when(invoiceLine.getTotalCommissions()).thenReturn(125.0);
+
+        // Sinistres et dus
         when(invoiceLine.getSettledClaimsDeath()).thenReturn(0.0);
         when(invoiceLine.getSettledClaimsDisability()).thenReturn(0.0);
         when(invoiceLine.getSettledClaimsUnemployment()).thenReturn(20.0);
@@ -39,8 +56,12 @@ public class InvoiceLineEntityTest {
         when(invoiceLine.getBrokerDue()).thenReturn(50.0);
         when(invoiceLine.getCompanyDue()).thenReturn(75.0);
 
-        InvoiceLineEntity entity = InvoiceLineEntity.from(invoiceLine);
+        entity = InvoiceLineEntity.from(invoiceLine);
+    }
 
+    // ---------- testFrom ----------
+    @Test
+    void testFrom_basicFields() {
         assertEquals(1L, entity.getEntityId());
         assertEquals(100L, entity.getEntityInvoiceId());
         assertEquals("CompanyX", entity.getEntityFinancialCompany());
@@ -49,19 +70,35 @@ public class InvoiceLineEntityTest {
         assertEquals("TypeA", entity.getEntitySubConventionType());
         assertEquals("Amend-01", entity.getEntityAmendment());
         assertEquals("Mand-2025", entity.getEntityMandate());
+    }
+
+    @Test
+    void testFrom_productFields() {
         assertEquals("OptionA", entity.getEntityInsuranceOptionOrRisk());
         assertEquals("Product A", entity.getEntityProductLabel());
         assertEquals("P123", entity.getEntityProductCode());
+    }
+
+    @Test
+    void testFrom_premiumAndVatFields() {
         assertEquals(1000.0, entity.getEntityTotalPremiumIncludingTax());
         assertEquals(800.0, entity.getEntityTotalPremiumExcludingTax());
         assertEquals(200.0, entity.getEntityTotalVat());
         assertEquals(2, entity.getEntityNumberOfFiles());
+    }
+
+    @Test
+    void testFrom_commissionsFields() {
         assertEquals(10.0, entity.getEntityUnitCommissionPerFile());
         assertEquals(5.0, entity.getEntityManagementCommissionRate());
         assertEquals(50.0, entity.getEntityManagementCommission());
         assertEquals(7.5, entity.getEntityBrokerageCommissionRate());
         assertEquals(75.0, entity.getEntityBrokerageCommission());
         assertEquals(125.0, entity.getEntityTotalCommissions());
+    }
+
+    @Test
+    void testFrom_settledClaimsAndDues() {
         assertEquals(0.0, entity.getEntitySettledClaimsDeath());
         assertEquals(0.0, entity.getEntitySettledClaimsDisability());
         assertEquals(20.0, entity.getEntitySettledClaimsUnemployment());
@@ -71,45 +108,63 @@ public class InvoiceLineEntityTest {
         assertEquals(75.0, entity.getEntityCompanyDue());
     }
 
+    // ---------- testToDomain ----------
     @Test
-    void testToDomain() {
+    void testToDomain_basicFields() {
         InvoiceLineEntity entity = new InvoiceLineEntity();
         entity.setEntityId(1L);
         entity.setEntityInvoiceId(100L);
         entity.setEntityFinancialCompany("CompanyX");
-        // ... set other fields ici si besoin ...
+        entity.setEntityGroupContractNumber("GCN-123");
+        entity.setEntityConventionOrPolicy("Policy-01");
+        entity.setEntitySubConventionType("TypeA");
+        entity.setEntityAmendment("Amend-01");
+        entity.setEntityMandate("Mand-2025");
 
         InvoiceLine domain = InvoiceLineEntity.toDomain(entity);
 
         assertEquals(1L, domain.getId());
         assertEquals(100L, domain.getInvoiceId());
         assertEquals("CompanyX", domain.getFinancialCompany());
-        // ... asserts autres si besoin ...
+        assertEquals("GCN-123", domain.getGroupContractNumber());
+        assertEquals("Policy-01", domain.getConventionOrPolicy());
+        assertEquals("TypeA", domain.getSubConventionType());
+        assertEquals("Amend-01", domain.getAmendment());
+        assertEquals("Mand-2025", domain.getMandate());
     }
 
     @Test
-    void testFromList() {
-        InvoiceLine invoiceLine = mock(InvoiceLine.class);
-        when(invoiceLine.getId()).thenReturn(1L);
-        when(invoiceLine.getInvoiceId()).thenReturn(100L);
-        when(invoiceLine.getFinancialCompany()).thenReturn("CompanyX");
-
-        List<InvoiceLineEntity> entities = InvoiceLineEntity.fromList(List.of(invoiceLine));
-
-        assertEquals(1, entities.size());
-        assertEquals(1L, entities.get(0).getEntityId());
-    }
-
-    @Test
-    void testToDomainList() {
+    void testToDomain_commissionsAndDues() {
         InvoiceLineEntity entity = new InvoiceLineEntity();
-        entity.setEntityId(1L);
-        entity.setEntityInvoiceId(100L);
-        entity.setEntityFinancialCompany("CompanyX");
+        entity.setEntityUnitCommissionPerFile(10.0);
+        entity.setEntityManagementCommissionRate(5.0);
+        entity.setEntityManagementCommission(50.0);
+        entity.setEntityBrokerageCommissionRate(7.5);
+        entity.setEntityBrokerageCommission(75.0);
+        entity.setEntityTotalCommissions(125.0);
+        entity.setEntityBrokerDue(50.0);
+        entity.setEntityCompanyDue(75.0);
 
-        List<InvoiceLine> domainList = InvoiceLineEntity.toDomainList(List.of(entity));
+        InvoiceLine domain = InvoiceLineEntity.toDomain(entity);
 
+        assertEquals(10.0, domain.getUnitCommissionPerFile());
+        assertEquals(5.0, domain.getManagementCommissionRate());
+        assertEquals(50.0, domain.getManagementCommission());
+        assertEquals(7.5, domain.getBrokerageCommissionRate());
+        assertEquals(75.0, domain.getBrokerageCommission());
+        assertEquals(125.0, domain.getTotalCommissions());
+        assertEquals(50.0, domain.getBrokerDue());
+        assertEquals(75.0, domain.getCompanyDue());
+    }
+
+    @Test
+    void testFromList_and_toDomainList() {
+        List<InvoiceLineEntity> entityList = InvoiceLineEntity.fromList(List.of(invoiceLine));
+        assertEquals(1, entityList.size());
+        assertEquals(1L, entityList.get(0).getEntityId());
+
+        List<InvoiceLine> domainList = InvoiceLineEntity.toDomainList(entityList);
         assertEquals(1, domainList.size());
-        assertEquals("CompanyX", domainList.get(0).getFinancialCompany());
+        assertEquals(1L, domainList.get(0).getId());
     }
 }
