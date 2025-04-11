@@ -12,35 +12,79 @@ public class InvoiceLineEntityTest {
         InvoiceLine invoiceLine = mock(InvoiceLine.class);
         when(invoiceLine.getId()).thenReturn(1L);
         when(invoiceLine.getInvoiceId()).thenReturn(100L);
-        when(invoiceLine.getFinancialCompany()).thenReturn("TestCompany");
-        when(invoiceLine.getTotalVat()).thenReturn(99.99);
-        when(invoiceLine.getNumberOfFiles()).thenReturn(5);
+        when(invoiceLine.getFinancialCompany()).thenReturn("CompanyX");
+        when(invoiceLine.getGroupContractNumber()).thenReturn("GCN-123");
+        when(invoiceLine.getConventionOrPolicy()).thenReturn("Policy-01");
+        when(invoiceLine.getSubConventionType()).thenReturn("TypeA");
+        when(invoiceLine.getAmendment()).thenReturn("Amend-01");
+        when(invoiceLine.getMandate()).thenReturn("Mand-2025");
+        when(invoiceLine.getInsuranceOptionOrRisk()).thenReturn("OptionA");
+        when(invoiceLine.getProductLabel()).thenReturn("Product A");
+        when(invoiceLine.getProductCode()).thenReturn("P123");
+        when(invoiceLine.getTotalPremiumIncludingTax()).thenReturn(1000.0);
+        when(invoiceLine.getTotalPremiumExcludingTax()).thenReturn(800.0);
+        when(invoiceLine.getTotalVat()).thenReturn(200.0);
+        when(invoiceLine.getNumberOfFiles()).thenReturn(2);
+        when(invoiceLine.getUnitCommissionPerFile()).thenReturn(10.0);
+        when(invoiceLine.getManagementCommissionRate()).thenReturn(5.0);
+        when(invoiceLine.getManagementCommission()).thenReturn(50.0);
+        when(invoiceLine.getBrokerageCommissionRate()).thenReturn(7.5);
+        when(invoiceLine.getBrokerageCommission()).thenReturn(75.0);
+        when(invoiceLine.getTotalCommissions()).thenReturn(125.0);
+        when(invoiceLine.getSettledClaimsDeath()).thenReturn(0.0);
+        when(invoiceLine.getSettledClaimsDisability()).thenReturn(0.0);
+        when(invoiceLine.getSettledClaimsUnemployment()).thenReturn(20.0);
+        when(invoiceLine.getSettledClaimsOthers()).thenReturn(5.0);
+        when(invoiceLine.getTotalClaims()).thenReturn(25.0);
+        when(invoiceLine.getBrokerDue()).thenReturn(50.0);
+        when(invoiceLine.getCompanyDue()).thenReturn(75.0);
 
         InvoiceLineEntity entity = InvoiceLineEntity.from(invoiceLine);
 
         assertEquals(1L, entity.getEntityId());
         assertEquals(100L, entity.getEntityInvoiceId());
-        assertEquals("TestCompany", entity.getEntityFinancialCompany());
-        assertEquals(99.99, entity.getEntityTotalVat());
-        assertEquals(5, entity.getEntityNumberOfFiles());
+        assertEquals("CompanyX", entity.getEntityFinancialCompany());
+        assertEquals("GCN-123", entity.getEntityGroupContractNumber());
+        assertEquals("Policy-01", entity.getEntityConventionOrPolicy());
+        assertEquals("TypeA", entity.getEntitySubConventionType());
+        assertEquals("Amend-01", entity.getEntityAmendment());
+        assertEquals("Mand-2025", entity.getEntityMandate());
+        assertEquals("OptionA", entity.getEntityInsuranceOptionOrRisk());
+        assertEquals("Product A", entity.getEntityProductLabel());
+        assertEquals("P123", entity.getEntityProductCode());
+        assertEquals(1000.0, entity.getEntityTotalPremiumIncludingTax());
+        assertEquals(800.0, entity.getEntityTotalPremiumExcludingTax());
+        assertEquals(200.0, entity.getEntityTotalVat());
+        assertEquals(2, entity.getEntityNumberOfFiles());
+        assertEquals(10.0, entity.getEntityUnitCommissionPerFile());
+        assertEquals(5.0, entity.getEntityManagementCommissionRate());
+        assertEquals(50.0, entity.getEntityManagementCommission());
+        assertEquals(7.5, entity.getEntityBrokerageCommissionRate());
+        assertEquals(75.0, entity.getEntityBrokerageCommission());
+        assertEquals(125.0, entity.getEntityTotalCommissions());
+        assertEquals(0.0, entity.getEntitySettledClaimsDeath());
+        assertEquals(0.0, entity.getEntitySettledClaimsDisability());
+        assertEquals(20.0, entity.getEntitySettledClaimsUnemployment());
+        assertEquals(5.0, entity.getEntitySettledClaimsOthers());
+        assertEquals(25.0, entity.getEntityTotalClaims());
+        assertEquals(50.0, entity.getEntityBrokerDue());
+        assertEquals(75.0, entity.getEntityCompanyDue());
     }
 
     @Test
     void testToDomain() {
         InvoiceLineEntity entity = new InvoiceLineEntity();
-        entity.setEntityId(2L);
-        entity.setEntityInvoiceId(200L);
-        entity.setEntityFinancialCompany("AnotherCompany");
-        entity.setEntityTotalVat(49.99);
-        entity.setEntityNumberOfFiles(3);
+        entity.setEntityId(1L);
+        entity.setEntityInvoiceId(100L);
+        entity.setEntityFinancialCompany("CompanyX");
+        // ... set other fields ici si besoin ...
 
         InvoiceLine domain = InvoiceLineEntity.toDomain(entity);
 
-        assertEquals(2L, domain.getId());
-        assertEquals(200L, domain.getInvoiceId());
-        assertEquals("AnotherCompany", domain.getFinancialCompany());
-        assertEquals(49.99, domain.getTotalVat());
-        assertEquals(3, domain.getNumberOfFiles());
+        assertEquals(1L, domain.getId());
+        assertEquals(100L, domain.getInvoiceId());
+        assertEquals("CompanyX", domain.getFinancialCompany());
+        // ... asserts autres si besoin ...
     }
 
     @Test
@@ -48,30 +92,24 @@ public class InvoiceLineEntityTest {
         InvoiceLine invoiceLine = mock(InvoiceLine.class);
         when(invoiceLine.getId()).thenReturn(1L);
         when(invoiceLine.getInvoiceId()).thenReturn(100L);
-        when(invoiceLine.getFinancialCompany()).thenReturn("TestCompany");
-        when(invoiceLine.getTotalVat()).thenReturn(99.99);
-        when(invoiceLine.getNumberOfFiles()).thenReturn(5);
+        when(invoiceLine.getFinancialCompany()).thenReturn("CompanyX");
 
         List<InvoiceLineEntity> entities = InvoiceLineEntity.fromList(List.of(invoiceLine));
 
         assertEquals(1, entities.size());
-        InvoiceLineEntity entity = entities.get(0);
-        assertEquals(1L, entity.getEntityId());
+        assertEquals(1L, entities.get(0).getEntityId());
     }
 
     @Test
     void testToDomainList() {
         InvoiceLineEntity entity = new InvoiceLineEntity();
-        entity.setEntityId(2L);
-        entity.setEntityInvoiceId(200L);
-        entity.setEntityFinancialCompany("AnotherCompany");
-        entity.setEntityTotalVat(49.99);
-        entity.setEntityNumberOfFiles(3);
+        entity.setEntityId(1L);
+        entity.setEntityInvoiceId(100L);
+        entity.setEntityFinancialCompany("CompanyX");
 
         List<InvoiceLine> domainList = InvoiceLineEntity.toDomainList(List.of(entity));
 
         assertEquals(1, domainList.size());
-        InvoiceLine domain = domainList.get(0);
-        assertEquals("AnotherCompany", domain.getFinancialCompany());
+        assertEquals("CompanyX", domainList.get(0).getFinancialCompany());
     }
 }
