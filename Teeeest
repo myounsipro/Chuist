@@ -4,41 +4,41 @@ import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class NotBeforeTimeExceptionTest {
+class NotAfterTimeExceptionTest {
 
     @Test
-    void strictlyNotBefore_shouldBuildCorrectException() {
+    void strictlyNotAfter_shouldBuildExceptionWithCorrectMessage() {
         // Given
-        Instant value = Instant.parse("2024-01-01T10:00:00Z");
-        Instant other = Instant.parse("2024-01-01T12:00:00Z");
-        String field = "startDate";
+        Instant value = Instant.parse("2024-06-01T10:00:00Z");
+        Instant other = Instant.parse("2024-06-01T08:00:00Z");
+        String field = "endDate";
 
-        NotBeforeTimeException ex = NotBeforeTimeException.strictlyNotBefore()
+        NotAfterTimeException ex = NotAfterTimeException.strictlyNotAfter()
                 .value(value)
                 .field(field)
                 .other(other);
 
         // Then
-        String expectedMsg = "Time 2024-01-01T10:00:00Z in \"startDate\" must be strictly before 2024-01-01T12:00:00Z but wasn't.";
-        assertEquals(expectedMsg, ex.getMessage());
-        assertEquals(AssertionErrorType.NOT_BEFORE_TIME, ex.type());
+        String expectedMessage = "Time 2024-06-01T10:00:00Z in \"endDate\" must be strictly after 2024-06-01T08:00:00Z but wasn't.";
+        assertEquals(expectedMessage, ex.getMessage());
+        assertEquals(AssertionErrorType.NOT_AFTER_TIME, ex.type());
     }
 
     @Test
-    void notBefore_shouldBuildCorrectException() {
+    void notAfter_shouldBuildExceptionWithCorrectMessage() {
         // Given
-        Instant value = Instant.parse("2023-12-31T23:59:59Z");
-        Instant other = Instant.parse("2024-01-01T00:00:00Z");
-        String field = "limit";
+        Instant value = Instant.parse("2024-05-31T12:00:00Z");
+        Instant other = Instant.parse("2024-06-01T00:00:00Z");
+        String field = "deadline";
 
-        NotBeforeTimeException ex = NotBeforeTimeException.notBefore()
+        NotAfterTimeException ex = NotAfterTimeException.notAfter()
                 .value(value)
                 .field(field)
                 .other(other);
 
         // Then
-        String expectedMsg = "Time 2023-12-31T23:59:59Z in \"limit\" must be before 2024-01-01T00:00:00Z but wasn't.";
-        assertEquals(expectedMsg, ex.getMessage());
-        assertEquals(AssertionErrorType.NOT_BEFORE_TIME, ex.type());
+        String expectedMessage = "Time 2024-05-31T12:00:00Z in \"deadline\" must be after 2024-06-01T00:00:00Z but wasn't.";
+        assertEquals(expectedMessage, ex.getMessage());
+        assertEquals(AssertionErrorType.NOT_AFTER_TIME, ex.type());
     }
 }
