@@ -1,91 +1,116 @@
-import static org.junit.jupiter.api.Assertions.*;
+
+
+/*
+<dependency>
+  <groupId>org.mockito</groupId>
+  <artifactId>mockito-inline</artifactId>
+  <version>5.2.0</version>
+  <scope>test</scope>
+</dependency>
+*/
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.security.oauth2.jwt.Jwt;
 
-public class InvoiceLineTest {
+import java.util.*;
 
-    @Test
-    void testBasicFields() {
-        InvoiceLine invoiceLine = new InvoiceLine();
-        invoiceLine.setId(1L);
-        invoiceLine.setInvoiceId(100L);
-        invoiceLine.setFinancialCompany("CompanyX");
-        invoiceLine.setGroupContractNumber("GCN-123");
-        invoiceLine.setConventionOrPolicy("Policy-01");
-        invoiceLine.setSubConventionType("TypeA");
-        invoiceLine.setAmendment("Amend-01");
-        invoiceLine.setMandate("MandateX");
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-        assertEquals(1L, invoiceLine.getId());
-        assertEquals(100L, invoiceLine.getInvoiceId());
-        assertEquals("CompanyX", invoiceLine.getFinancialCompany());
-        assertEquals("GCN-123", invoiceLine.getGroupContractNumber());
-        assertEquals("Policy-01", invoiceLine.getConventionOrPolicy());
-        assertEquals("TypeA", invoiceLine.getSubConventionType());
-        assertEquals("Amend-01", invoiceLine.getAmendment());
-        assertEquals("MandateX", invoiceLine.getMandate());
+class UserSynchronizerTest {
+
+    private UserRepository userRepository;
+    private UserSynchronizer userSynchronizer;
+
+    @BeforeEach
+    void setup() {
+        userRepository = mock(UserRepository.class);
+        userSynchronizer = new UserSynchronizer(userRepository);
     }
 
     @Test
-    void testProductFields() {
-        InvoiceLine invoiceLine = new InvoiceLine();
-        invoiceLine.setInsuranceOptionOrRisk("OptionA");
-        invoiceLine.setProductLabel("Product A");
-        invoiceLine.setProductCode("P123");
+    void syncWithIdp_shouldUpdateExistingUser_ifAuthoritiesDiffer() {
+        // Given
+        Jwt jwt = mock(Jwt.class);
+        Map<String, Object> claims = Map.of("claimKey", "claimValue");
+        when(jwt.getClaims()).thenReturn(claims);
 
-        assertEquals("OptionA", invoiceLine.getInsuranceOptionOrRisk());
-        assertEquals("Product A", invoiceLine.getProductLabel());
-        assertEquals("P123", invoiceLine.getProductCode());
+        User incomingUser = mock(User.class);
+        when(incomingUser.getEmail()).thenReturn("test@example.com");
+        when(incomingUser.getAuthorities()).thenReturn(List.of("ROLE_USER"));
+
+        User existingUser = mock(User.class);
+        when(existingUser.getAuthorities()).thenReturn(List.of("ROLE_ADMIN"));
+
+        when(userRepository.getOneByEmail("test@example.com"))
+                .thenReturn(Optional.of(existingUser));
+
+        // Simule les rôles extraits depuis les claims
+        mockStatic(AuthenticatedUser.class).when(() ->
+                AuthenticatedUser.extractAuthoritiesFromAttributes(claims))
+                .thenReturn(List.of("ROLE_USER"));
+
+        mockStatic(User.class).when(() ->
+                User.fromTokenUserInfo(any(), any()))
+                .thenReturn(incomingUser);
+
+        // When
+        userSynchronizer.syncWithIdp(jwt, claims);
+
+        // Then
+        verify(existingUser).updateFromUserWithAuthorities(incomingUser);
+        verify(userRepository).save(existingUser);
     }
 
     @Test
-    void testPremiumFields() {
-        InvoiceLine invoiceLine = new InvoiceLine();
-        invoiceLine.setTotalPremiumIncludingTax(1000.0);
-        invoiceLine.setTotalPremiumExcludingTax(800.0);
-        invoiceLine.setTotalVat(200.0);
-        invoiceLine.setNumberOfFiles(2);
+    void syncWithIdp_shouldNotUpdate_ifAuthoritiesAreSame() {
+        Jwt jwt = mock(Jwt.class);
+        Map<String, Object> claims = Map.of();
+        when(jwt.getClaims()).thenReturn(claims);
 
-        assertEquals(1000.0, invoiceLine.getTotalPremiumIncludingTax());
-        assertEquals(800.0, invoiceLine.getTotalPremiumExcludingTax());
-        assertEquals(200.0, invoiceLine.getTotalVat());
-        assertEquals(2, invoiceLine.getNumberOfFiles());
+        User user = mock(User.class);
+        when(user.getEmail()).thenReturn("test@example.com");
+        when(user.getAuthorities()).thenReturn(List.of("ROLE_USER"));
+
+        when(userRepository.getOneByEmail("test@example.com"))
+                .thenReturn(Optional.of(user));
+
+        mockStatic(AuthenticatedUser.class).when(() ->
+                AuthenticatedUser.extractAuthoritiesFromAttributes(claims))
+                .thenReturn(List.of("ROLE_USER"));
+
+        mockStatic(User.class).when(() ->
+                User.fromTokenUserInfo(any(), any()))
+                .thenReturn(user);
+
+        userSynchronizer.syncWithIdp(jwt, claims);
+
+        verify(userRepository, never()).save(any());
     }
 
     @Test
-    void testCommissionFields() {
-        InvoiceLine invoiceLine = new InvoiceLine();
-        invoiceLine.setUnitCommissionPerFile(10.0);
-        invoiceLine.setManagementCommissionRate(5.0);
-        invoiceLine.setManagementCommission(50.0);
-        invoiceLine.setBrokerageCommissionRate(7.5);
-        invoiceLine.setBrokerageCommission(75.0);
-        invoiceLine.setTotalCommissions(125.0);
+    void syncWithIdp_shouldSaveNewUser_ifNotExists() {
+        Jwt jwt = mock(Jwt.class);
+        Map<String, Object> claims = Map.of();
+        when(jwt.getClaims()).thenReturn(claims);
 
-        assertEquals(10.0, invoiceLine.getUnitCommissionPerFile());
-        assertEquals(5.0, invoiceLine.getManagementCommissionRate());
-        assertEquals(50.0, invoiceLine.getManagementCommission());
-        assertEquals(7.5, invoiceLine.getBrokerageCommissionRate());
-        assertEquals(75.0, invoiceLine.getBrokerageCommission());
-        assertEquals(125.0, invoiceLine.getTotalCommissions());
-    }
+        User user = mock(User.class);
+        when(user.getEmail()).thenReturn("new@example.com");
 
-    @Test
-    void testClaimsAndDuesFields() {
-        InvoiceLine invoiceLine = new InvoiceLine();
-        invoiceLine.setSettledClaimsDeath(0.0);
-        invoiceLine.setSettledClaimsDisability(0.0);
-        invoiceLine.setSettledClaimsUnemployment(20.0);
-        invoiceLine.setSettledClaimsOthers(5.0);
-        invoiceLine.setTotalClaims(25.0);
-        invoiceLine.setBrokerDue(50.0);
-        invoiceLine.setCompanyDue(75.0);
+        when(userRepository.getOneByEmail("new@example.com"))
+                .thenReturn(Optional.empty());
 
-        assertEquals(0.0, invoiceLine.getSettledClaimsDeath());
-        assertEquals(0.0, invoiceLine.getSettledClaimsDisability());
-        assertEquals(20.0, invoiceLine.getSettledClaimsUnemployment());
-        assertEquals(5.0, invoiceLine.getSettledClaimsOthers());
-        assertEquals(25.0, invoiceLine.getTotalClaims());
-        assertEquals(50.0, invoiceLine.getBrokerDue());
-        assertEquals(75.0, invoiceLine.getCompanyDue());
+        mockStatic(AuthenticatedUser.class).when(() ->
+                AuthenticatedUser.extractAuthoritiesFromAttributes(claims))
+                .thenReturn(List.of("ROLE_USER"));
+
+        mockStatic(User.class).when(() ->
+                User.fromTokenUserInfo(any(), any()))
+                .thenReturn(user);
+
+        userSynchronizer.syncWithIdp(jwt, claims);
+
+        verify(userRepository).save(user);
     }
 }
