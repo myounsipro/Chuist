@@ -1,4 +1,5 @@
-;
+
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -8,46 +9,42 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class UserDetailsServiceDevTest {
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+
+class UserDetailsServiceImplTest {
 
     @Mock
     private WebSsoJwtHelper webSsoJwtHelper;
 
     @Mock
-    private Oauth2ResourceServerUserInfoService userInfoService;
-
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
     private SecurityContext securityContext;
 
     @Mock
-    private JwtAuthenticationToken jwtAuthToken;
+    private JwtAuthenticationToken jwtAuthenticationToken;
 
-    private UserDetailsServiceDev userDetailsService;
+    private UserDetailsServiceImpl userDetailsService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        userDetailsService = new UserDetailsServiceDev(webSsoJwtHelper, userInfoService, userRepository);
+        userDetailsService = new UserDetailsServiceImpl(webSsoJwtHelper);
         SecurityContextHolder.setContext(securityContext);
     }
 
     @Test
-    void loadUserByUsername_shouldReturnUserDetails_whenWebSsoJwt() {
+    void loadUserByUsername_shouldReturnUserDetails_whenWebSsoJwtValid() {
         // Given
-        String username = "anyUser";
-        when(securityContext.getAuthentication()).thenReturn(jwtAuthToken);
-        when(webSsoJwtHelper.isWebSsoJwt(jwtAuthToken)).thenReturn(true);
-        when(webSsoJwtHelper.webSsoAuthorities(jwtAuthToken)).thenReturn(
-                Set.of(() -> "OCTA_READ", () -> "OCTA_WRITE")
-        );
+        String username = "webssoUser";
+        when(securityContext.getAuthentication()).thenReturn(jwtAuthenticationToken);
+        when(webSsoJwtHelper.isWebSsoJwt(jwtAuthenticationToken)).thenReturn(true);
+        Set<GrantedAuthority> authorities = Set.of(() -> "OCTA_READ");
+        when(webSsoJwtHelper.webSsoAuthorities(jwtAuthenticationToken)).thenReturn(authorities);
 
         // When
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
@@ -56,34 +53,12 @@ class UserDetailsServiceDevTest {
         assertEquals(username, userDetails.getUsername());
         assertTrue(userDetails.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("OCTA_READ")));
-        assertTrue(userDetails.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("OCTA_WRITE")));
     }
 
     @Test
-    void loadUserByUsername_shouldReturnUserDetails_whenFallbackUser() {
+    void loadUserByUsername_shouldThrowException_whenNotWebSso() {
         // Given
-        String username = "myUser1";
-        when(securityContext.getAuthentication()).thenReturn(mock(Authentication.class));
-
-        // When
-        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-
-        // Then
-        assertEquals("myUser1", userDetails.getUsername());
-        assertTrue(userDetails.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("OCTA_READ")));
-        assertTrue(userDetails.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("OCTA_WRITE")));
-        assertTrue(userDetails.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("USER")));
-        assertEquals("{noop}myPwdForUser1", userDetails.getPassword());
-    }
-
-    @Test
-    void loadUserByUsername_shouldThrowException_whenUserNotFound() {
-        // Given
-        String username = "unknownUser";
+        String username = "notFoundUser";
         when(securityContext.getAuthentication()).thenReturn(mock(Authentication.class));
 
         // Then
