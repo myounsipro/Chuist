@@ -1,118 +1,41 @@
-;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
-class SpringDataInvoiceRepositoryTest {
+class NumberValueTooHighExceptionTest {
 
-    private JpaInvoiceRepository jpaInvoiceRepository;
-    private InvoiceRepository invoiceRepository;
+    @Test
+    void shouldBuildExceptionWithCorrectMessageAndParameters() {
+        // Arrange
+        String field = "amount";
+        String max = "1000";
+        String value = "1500";
 
-    @BeforeEach
-    void setUp() {
-        jpaInvoiceRepository = mock(JpaInvoiceRepository.class);
-        invoiceRepository = new SpringDataInvoiceRepository(jpaInvoiceRepository);
+        NumberValueTooHighException ex = NumberValueTooHighException.builder()
+                .field(field)
+                .maxValue(max)
+                .value(value)
+                .build();
+
+        // Act & Assert
+        assertEquals("Value of field \"amount\" must be at most 1000 but was 1500", ex.getMessage());
+
+        assertEquals("1000", ex.parameters().get("max"));
+        assertEquals("1500", ex.parameters().get("value"));
+
+        assertEquals(AssertionErrorType.NUMBER_VALUE_TOO_HIGH, ex.type());
     }
 
     @Test
-    void save_shouldDelegateToJpa() {
-        Invoice invoice = mock(Invoice.class);
-        InvoiceEntity entity = mock(InvoiceEntity.class);
+    void messageBuilder_shouldReturnExpectedFormat() {
+        var builder = NumberValueTooHighException.builder()
+                .field("testField")
+                .maxValue("10")
+                .value("42");
 
-        mockStatic(InvoiceEntity.class).when(() -> InvoiceEntity.from(invoice)).thenReturn(entity);
-
-        invoiceRepository.save(invoice);
-
-        verify(jpaInvoiceRepository).save(entity);
-    }
-
-    @Test
-    void getAll_shouldReturnList() {
-        InvoiceEntity entity = mock(InvoiceEntity.class);
-        Invoice invoice = mock(Invoice.class);
-
-        when(jpaInvoiceRepository.findAll()).thenReturn(List.of(entity));
-        when(entity.toDomain()).thenReturn(invoice);
-
-        List<Invoice> result = invoiceRepository.getAll();
-
-        assertEquals(1, result.size());
-        assertEquals(invoice, result.get(0));
-    }
-
-    @Test
-    void getByInvoiceNumberAndIssuerKey_shouldReturnInvoice() {
-        String number = "INV001";
-        String issuer = "KEY1";
-        InvoiceEntity entity = mock(InvoiceEntity.class);
-        Invoice invoice = mock(Invoice.class);
-
-        when(jpaInvoiceRepository
-            .findTopByInvoiceNumberAndIssuerKeyOrderByInvoiceVersionDesc(number, issuer))
-            .thenReturn(Optional.of(entity));
-        when(entity.toDomain()).thenReturn(invoice);
-
-        Optional<Invoice> result = invoiceRepository.getOneByInvoiceNumberAndIssuerKey(number, issuer);
-
-        assertTrue(result.isPresent());
-        assertEquals(invoice, result.get());
-    }
-
-    @Test
-    void getByInvoiceNumberAndLatestVersion_shouldReturnInvoice() {
-        String number = "INV002";
-        InvoiceEntity entity = mock(InvoiceEntity.class);
-        Invoice invoice = mock(Invoice.class);
-
-        when(jpaInvoiceRepository
-            .findTopByInvoiceNumberOrderByInvoiceVersionDesc(number))
-            .thenReturn(Optional.of(entity));
-        when(entity.toDomain()).thenReturn(invoice);
-
-        Optional<Invoice> result = invoiceRepository.getOneByInvoiceNumberAndLatestVersion(number);
-
-        assertTrue(result.isPresent());
-        assertEquals(invoice, result.get());
-    }
-
-    @Test
-    void getByInvoiceNumber_shouldReturnList() {
-        String number = "INV003";
-        InvoiceEntity entity = mock(InvoiceEntity.class);
-        Invoice invoice = mock(Invoice.class);
-
-        when(jpaInvoiceRepository.findByInvoiceNumber(number)).thenReturn(List.of(entity));
-        when(entity.toDomain()).thenReturn(invoice);
-
-        List<Invoice> result = invoiceRepository.getByInvoiceNumber(number);
-
-        assertEquals(1, result.size());
-        assertEquals(invoice, result.get(0));
-    }
-
-    @Test
-    void findLatestInvoices_shouldReturnPaginatedResult() {
-        PaginationRequest paginationRequest = new PaginationRequest(0, 5);
-        InvoiceEntity entity = mock(InvoiceEntity.class);
-        Invoice invoice = mock(Invoice.class);
-        Page<InvoiceEntity> page = new PageImpl<>(List.of(entity), PageRequest.of(0, 5), 1);
-
-        when(jpaInvoiceRepository.findLatestInvoices(PageRequest.of(0, 5))).thenReturn(page);
-        when(entity.toDomain()).thenReturn(invoice);
-
-        PaginatedResult<Invoice> result = invoiceRepository.findLatestInvoices(paginationRequest);
-
-        assertEquals(1, result.elements().size());
-        assertEquals(invoice, result.elements().get(0));
-        assertEquals(1, result.totalElements());
-        assertEquals(1, result.totalPages());
+        String expected = "Value of field \"testField\" must be at most 10 but was 42";
+        assertEquals(expected, builder.message());
     }
 }
