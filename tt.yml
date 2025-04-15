@@ -33,3 +33,28 @@ livenessProbe:
     port: 8080
   failureThreshold: 3
   periodSeconds: 10
+
+
+
+deployment:
+  probes:
+    startup:
+      httpGet:
+        path: /diagnostic/actuators/health/hypervision
+        port: 8080
+      failureThreshold: 30
+      periodSeconds: 10
+
+    readiness:
+      httpGet:
+        path: /diagnostic/actuators/health/hypervision
+        port: 8080
+      failureThreshold: 3
+      periodSeconds: 10
+
+    liveness:
+      httpGet:
+        path: /diagnostic/actuators/health/hypervision
+        port: 8080
+      failureThreshold: 3
+      periodSeconds: 10
