@@ -1,41 +1,25 @@
-it('should call getFiltredInvoices with correct query params', () => {
-  const filters = { insurer: 'Aaa', year: '2024', empty: '' };
-  const mockResponse = { files: [] };
+configmap:
+  enabled: true
+  extraConfigmapYaml:
+    nginx.conf: |
+      events {}
 
-  httpMock.get.mockReturnValue(of(mockResponse));
+      http {
+        access_log /dev/stdout;
+        error_log /dev/stderr warn;
 
-  service.getFiltredInvoices(filters).subscribe(result => {
-    expect(result).toEqual(mockResponse);
-  });
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
 
-  const expectedUrl = `${configMock.url}${configMock.basepath}/invoices/filtered`;
+        server {
+          listen 80;
+          server_name localhost;
 
-  expect(httpMock.get).toHaveBeenCalledWith(expectedUrl, {
-    params: expect.anything()
-  });
+          root /usr/share/nginx/html;
+          index index.html;
 
-  const calledParams = httpMock.get.mock.calls[0][1].params;
-  expect(calledParams.get('insurer')).toBe('Aaa');
-  expect(calledParams.get('year')).toBe('2024');
-  expect(calledParams.get('empty')).toBeNull(); // ignoré
-});
-
-it('should call getFiltredInvoices with no params if filters are empty', () => {
-  const filters = {};
-  const mockResponse = { files: [] };
-
-  httpMock.get.mockReturnValue(of(mockResponse));
-
-  service.getFiltredInvoices(filters).subscribe(result => {
-    expect(result).toEqual(mockResponse);
-  });
-
-  const expectedUrl = `${configMock.url}${configMock.basepath}/invoices/filtered`;
-
-  expect(httpMock.get).toHaveBeenCalledWith(expectedUrl, {
-    params: expect.anything()
-  });
-
-  const calledParams = httpMock.get.mock.calls[0][1].params;
-  expect(calledParams.keys().length).toBe(0);
-});
+          location / {
+            try_files $uri $uri/ /index.html;
+          }
+        }
+      }
