@@ -1,0 +1,89 @@
+import { TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { InvoiceService } from './invoice.service'; // adapte le chemin
+import { HttpParams } from '@angular/common/http';
+import { InvoiceFileResponse } from '../models/invoice.model'; // adapte le chemin
+
+describe('InvoiceService', () => {
+  let service: InvoiceService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
+      providers: [InvoiceService]
+    });
+
+    service = TestBed.inject(InvoiceService);
+    httpMock = TestBed.inject(HttpTestingController);
+    service['apiUrl'] = 'http://mock-api'; // injecte l'url simulée si c’est une propriété privée
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it('should call GET /filtered with correct query params', () => {
+    const filters = {
+      insurer: 'Bbb',
+      year: '2024',
+      emptyParam: '', // ne doit pas être inclus
+    };
+
+    const mockResponse: InvoiceFileResponse = {
+      files: [], // ou adapte selon la structure réelle
+    };
+
+    service.getFiltredInvoices(filters).subscribe(response => {
+      expect(response).toEqual(mockResponse);
+    });
+
+    const req = httpMock.expectOne(req =>
+      req.method === 'GET' &&
+      req.url === 'http://mock-api/filtered' &&
+      req.params.get('insurer') === 'Bbb' &&
+      req.params.get('year') === '2024' &&
+      req.params.get('emptyParam') === null
+    );
+
+    req.flush(mockResponse);
+  });
+});
+
+
+it('should call GET /filtered with no query params when filters are empty', () => {
+  const filters = {};
+  const mockResponse: InvoiceFileResponse = { files: [] };
+
+  service.getFiltredInvoices(filters).subscribe(response => {
+    expect(response).toEqual(mockResponse);
+  });
+
+  const req = httpMock.expectOne(req =>
+    req.method === 'GET' &&
+    req.url === 'http://mock-api/filtered' &&
+    req.params.keys().length === 0
+  );
+
+  req.flush(mockResponse);
+});
+
+
+
+it('should propagate error when the HTTP request fails', () => {
+  const filters = { insurer: 'Aaa' };
+  const mockError = { status: 500, statusText: 'Server Error' };
+
+  service.getFiltredInvoices(filters).subscribe({
+    next: () => fail('Expected error, but got success'),
+    error: (error) => {
+      expect(error.status).toBe(500);
+      expect(error.statusText).toBe('Server Error');
+    }
+  });
+
+  const req = httpMock.expectOne('http://mock-api/filtered?insurer=Aaa');
+  req.flush({}, mockError);
+});
+
+
