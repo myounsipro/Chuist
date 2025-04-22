@@ -1,60 +1,11 @@
-management:
-  server:
-    base-path: /diagnostic/actuators
-  endpoints:
-    web:
-      exposure:
-        include: health
-      path-mapping:
-        health: health/hypervision
-  endpoint:
-    health:
-      show-details: always
-
-
-
-startupProbe:
-  httpGet:
-    path: /diagnostic/actuators/health/hypervision
-    port: 8080
-  failureThreshold: 30
-  periodSeconds: 10
-
-readinessProbe:
-  httpGet:
-    path: /diagnostic/actuators/health/hypervision
-    port: 8080
-  failureThreshold: 3
-  periodSeconds: 10
-
-livenessProbe:
-  httpGet:
-    path: /diagnostic/actuators/health/hypervision
-    port: 8080
-  failureThreshold: 3
-  periodSeconds: 10
-
-
-
-deployment:
-  probes:
-    startup:
-      httpGet:
-        path: /diagnostic/actuators/health/hypervision
-        port: 8080
-      failureThreshold: 30
-      periodSeconds: 10
-
-    readiness:
-      httpGet:
-        path: /diagnostic/actuators/health/hypervision
-        port: 8080
-      failureThreshold: 3
-      periodSeconds: 10
-
-    liveness:
-      httpGet:
-        path: /diagnostic/actuators/health/hypervision
-        port: 8080
-      failureThreshold: 3
-      periodSeconds: 10
+<logger name="audit.webservice.rest.client.operation" level="INFO">
+    <filter class="ch.qos.logback.classic.filter.EvaluatorFilter">
+        <evaluator class="ch.qos.logback.classic.boolex.JaninoEventEvaluator">
+            <expression>
+                !message.contains("websso-itg.staging.echonet")
+            </expression>
+        </evaluator>
+        <OnMismatch>NEUTRAL</OnMismatch>
+        <OnMatch>DENY</OnMatch>
+    </filter>
+</logger>
