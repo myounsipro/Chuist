@@ -1,36 +1,33 @@
 import { FilteredInvoiceComponent } from './filtered-invoice.component';
-import { of, throwError } from 'rxjs';
+import { of } from 'rxjs';
 
 describe('FilteredInvoiceComponent', () => {
   let component: FilteredInvoiceComponent;
-  let fileServiceMock: any;
+  let invoiceServiceMock: any;
 
   beforeEach(() => {
-    fileServiceMock = {
-      getFilters: jest.fn()
+    invoiceServiceMock = {
+      getFilteredInvoices: jest.fn()
     };
 
     component = new FilteredInvoiceComponent(
-      {} as any,         // invoiceService
-      fileServiceMock,
-      {} as any,         // snackbarPF
-      {} as any          // documentService
+      invoiceServiceMock,
+      {} as any, // fileService
+      {} as any, // snackbar
+      {} as any  // documentService
     );
+
+    component.invoices = {
+      set: jest.fn()
+    } as any;
   });
 
-  it('should log error when getFilters fails', () => {
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    const fakeError = new Error('backend down');
+  it('should set invoices from response', () => {
+    const mockResponse = { invoices: [{ id: 1 }, { id: 2 }] };
+    invoiceServiceMock.getFilteredInvoices.mockReturnValue(of(mockResponse));
 
-    fileServiceMock.getFilters.mockReturnValue(throwError(() => fakeError));
+    component.searchInvoices();
 
-    component.loadFilters();
-
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Error during fetching filtredInvoices: ',
-      fakeError
-    );
-
-    consoleSpy.mockRestore();
+    expect(component.invoices.set).toHaveBeenCalledWith(mockResponse.invoices);
   });
 });
