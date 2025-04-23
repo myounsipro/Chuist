@@ -1,25 +1,36 @@
-configmap:
-  enabled: true
-  extraConfigmapYaml:
-    nginx.conf: |
-      events {}
+import { FilteredInvoiceComponent } from './filtered-invoice.component';
+import { of, throwError } from 'rxjs';
 
-      http {
-        access_log /dev/stdout;
-        error_log /dev/stderr warn;
+describe('FilteredInvoiceComponent', () => {
+  let component: FilteredInvoiceComponent;
+  let fileServiceMock: any;
 
-        include /etc/nginx/mime.types;
-        default_type application/octet-stream;
+  beforeEach(() => {
+    fileServiceMock = {
+      getFilters: jest.fn()
+    };
 
-        server {
-          listen 80;
-          server_name localhost;
+    component = new FilteredInvoiceComponent(
+      {} as any,         // invoiceService
+      fileServiceMock,
+      {} as any,         // snackbarPF
+      {} as any          // documentService
+    );
+  });
 
-          root /usr/share/nginx/html;
-          index index.html;
+  it('should log error when getFilters fails', () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const fakeError = new Error('backend down');
 
-          location / {
-            try_files $uri $uri/ /index.html;
-          }
-        }
-      }
+    fileServiceMock.getFilters.mockReturnValue(throwError(() => fakeError));
+
+    component.loadFilters();
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Error during fetching filtredInvoices: ',
+      fakeError
+    );
+
+    consoleSpy.mockRestore();
+  });
+});
