@@ -1,33 +1,18 @@
-import { FilteredInvoiceComponent } from './filtered-invoice.component';
-import { of } from 'rxjs';
+import { AppConfig } from './app.config';
+import { environment } from '../environments/environment';
 
-describe('FilteredInvoiceComponent', () => {
-  let component: FilteredInvoiceComponent;
-  let invoiceServiceMock: any;
+describe('AppConfig', () => {
+  let config: AppConfig;
 
   beforeEach(() => {
-    invoiceServiceMock = {
-      getFilteredInvoices: jest.fn()
-    };
-
-    component = new FilteredInvoiceComponent(
-      invoiceServiceMock,
-      {} as any, // fileService
-      {} as any, // snackbar
-      {} as any  // documentService
-    );
-
-    component.invoices = {
-      set: jest.fn()
-    } as any;
+    config = new AppConfig();
   });
 
-  it('should set invoices from response', () => {
-    const mockResponse = { invoices: [{ id: 1 }, { id: 2 }] };
-    invoiceServiceMock.getFilteredInvoices.mockReturnValue(of(mockResponse));
-
-    component.searchInvoices();
-
-    expect(component.invoices.set).toHaveBeenCalledWith(mockResponse.invoices);
+  it('should load configuration from environment', (done) => {
+    config.load().subscribe((loaded) => {
+      expect(loaded).toMatchObject(environment);
+      expect(config).toMatchObject(environment); // l'objet this aussi est modifié
+      done();
+    });
   });
 });
