@@ -1,12 +1,13 @@
 it('should set invoices to an empty array when response.invoices is undefined', () => {
-  const mockResponse = { invoices: undefined };
+  const mockResponse: InvoiceFileResponse = {
+    invoices: undefined,
+    error: undefined
+  };
+
+  component['invoices'] = { set: jest.fn() };
   jest.spyOn(invoiceService, 'getFiltredInvoices').mockReturnValue(of(mockResponse));
 
   component.searchInvoices();
 
   expect(component['invoices'].set).toHaveBeenCalledWith([]);
-});
-
-beforeEach(() => {
-  component['invoices'] = { set: jest.fn() };
 });
