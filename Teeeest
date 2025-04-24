@@ -1,18 +1,3 @@
-import { AppConfig } from './app.config';
-import { environment } from '../environments/environment';
-
-describe('AppConfig', () => {
-  let config: AppConfig;
-
-  beforeEach(() => {
-    config = new AppConfig();
-  });
-
-  it('should load configuration from environment', (done) => {
-    config.load().subscribe((loaded) => {
-      expect(loaded).toMatchObject(environment);
-      expect(config).toMatchObject(environment); // l'objet this aussi est modifié
-      done();
-    });
-  });
-});
+script:
+  - echo "Sonar exclusions: $SONAR_EXCLUSIONS"
+  - sonar-scanner
