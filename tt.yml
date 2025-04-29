@@ -1,27 +1,17 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<configuration>
+nginx.ingress.kubernetes.io/enable-cors: "true"
+nginx.ingress.kubernetes.io/cors-allow-origin: "https://ui....."
+nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, OPTIONS"
+nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type"
 
-    <include resource="org/springframework/boot/logging/logback/base.xml"/>
 
-    <!-- Logger pour filtrer les logs contenant websso -->
-    <logger name="audit.webservice.rest.client.operation" level="INFO" additivity="false">
-        <appender-ref ref="CONSOLE_WITH_FILTER"/>
-    </logger>
 
-    <!-- Appender console avec filtre personnalisé -->
-    <appender name="CONSOLE_WITH_FILTER" class="ch.qos.logback.core.ConsoleAppender">
-        <filter class="ch.qos.logback.classic.filter.EvaluatorFilter">
-            <evaluator class="ch.qos.logback.classic.boolex.JaninoEventEvaluator">
-                <expression>
-                    !message.contains("websso-itg.staging.echonet")
-                </expression>
-            </evaluator>
-            <OnMismatch>NEUTRAL</OnMismatch>
-            <OnMatch>DENY</OnMatch>
-        </filter>
-        <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-        </encoder>
-    </appender>
-
-</configuration>
+annotations:
+  kubernetes.io/ingress.class: private-iks-k8s-nginx
+  nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+  nginx.ingress.kubernetes.io/ssl-passthrough: "false"
+  nginx.ingress.kubernetes.io/enable-cors: "true"
+  nginx.ingress.kubernetes.io/cors-allow-origin: "https://ouit"
+  nginx.ingress.kubernetes.io/cors-allow-methods: "GET, PUT, POST, DELETE, PATCH, OPTIONS"
+  nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization, Content-Type, Origin, Accept"
+  nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
