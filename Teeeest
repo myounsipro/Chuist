@@ -1,43 +1,8 @@
-public File downloadExcelFilesAsZip(List<String> filenames) {
-    File zipFile;
+@ExceptionHandler(FileRetrievalException.class)
+public ResponseEntity<Map<String, String>> handleFileRetrievalException(FileRetrievalException ex) {
+    Map<String, String> error = new HashMap<>();
+    error.put("error", "File download failed");
+    error.put("message", ex.getMessage());
 
-    try {
-        zipFile = File.createTempFile("s3_excel_batch_", ".zip");
-
-        try (ZipOutputStream zipOut = new ZipOutputStream(new FileOutputStream(zipFile))) {
-            for (String filename : filenames) {
-                LOG.info("Downloading file from S3: {}", filename);
-
-                try (S3Object s3object = client.getObject(bucketName, filename);
-                     InputStream in = s3object.getObjectContent()) {
-
-                    String nameInZip = filename.contains("/") ? filename.substring(filename.lastIndexOf("/") + 1) : filename;
-                    zipOut.putNextEntry(new ZipEntry(nameInZip));
-                    in.transferTo(zipOut);
-                    zipOut.closeEntry();
-
-                } catch (AmazonS3Exception s3e) {
-                    if (s3e.getStatusCode() == 404) {
-                        String msg = String.format("File not found in S3: '%s'", filename);
-                        LOG.error(msg);
-                        throw new FileRetrievalException(msg, s3e);
-                    } else {
-                        String msg = String.format("Error retrieving file '%s' from S3", filename);
-                        LOG.error(msg, s3e);
-                        throw new FileRetrievalException(msg, s3e);
-                    }
-
-                } catch (IOException ioe) {
-                    String msg = String.format("IO error while processing file '%s'", filename);
-                    LOG.error(msg, ioe);
-                    throw new FileRetrievalException(msg, ioe);
-                }
-            }
-        }
-
-    } catch (IOException e) {
-        throw new FileRetrievalException("Failed to create zip archive", e);
-    }
-
-    return zipFile;
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
 }
