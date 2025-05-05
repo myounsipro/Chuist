@@ -1,8 +1,23 @@
-@ExceptionHandler(FileRetrievalException.class)
-public ResponseEntity<Map<String, String>> handleFileRetrievalException(FileRetrievalException ex) {
+public class FileNotFoundInS3Exception extends FileRetrievalException {
+    public FileNotFoundInS3Exception(String message, Throwable cause) {
+        super(message, cause);
+    }
+}
+
+
+if (s3e.getStatusCode() == 404) {
+    String msg = String.format("File not found in S3: '%s'", filename);
+    LOG.error(msg);
+    throw new FileNotFoundInS3Exception(msg, s3e);
+}
+
+
+
+@ExceptionHandler(FileNotFoundInS3Exception.class)
+public ResponseEntity<Map<String, String>> handleFileNotFound(FileNotFoundInS3Exception ex) {
     Map<String, String> error = new HashMap<>();
-    error.put("error", "File download failed");
+    error.put("error", "File not found");
     error.put("message", ex.getMessage());
 
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
 }
