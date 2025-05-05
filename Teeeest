@@ -1,16 +1,69 @@
-public byte[] getExcelFile(String itemName) {
-    LOG.info("Retrieving Excel file - bucket: [{}] key: [{}]", bucketName, itemName);
-    
-    try {
-        S3Object s3object = s3Client.getObject(new GetObjectRequest(bucketName, itemName));
-        return s3object.getObjectContent().readAllBytes(); // Java 11+
-
-    } catch (AmazonS3Exception ase) {
-        LOG.error("AmazonS3Exception - Error reading bucket: [{}] key:[{}] - errorCode: [{}]",
-                  bucketName, itemName, ase.getErrorCode(), ase);
-        throw new RuntimeException("S3 error: " + ase.getMessage());
-    } catch (IOException ioe) {
-        LOG.error("IOException - Error reading bucket: [{}] key:[{}]", bucketName, itemName, ioe);
-        throw new RuntimeException("IO error: " + ioe.getMessage());
+public class FileRetrievalException extends RuntimeException {
+    public FileRetrievalException(String message, Throwable cause) {
+        super(message, cause);
     }
 }
+
+
+
+
+public byte[] getExcelFile(String itemName) {
+    LOG.info("Retrieving Excel file - bucket: [{}] key: [{}]", bucketName, itemName);
+
+    try {
+        S3Object s3object = client.getObject(new GetObjectRequest(bucketName, itemName));
+        return s3object.getObjectContent().readAllBytes();
+
+    } catch (AmazonS3Exception ase) {
+        String msg = String.format("S3 error - bucket: %s, key: %s, code: %s", 
+                                   bucketName, itemName, ase.getErrorCode());
+        LOG.error(msg, ase);
+        throw new FileRetrievalException(msg, ase);
+
+    } catch (IOException ioe) {
+        String msg = String.format("IO error - bucket: %s, key: %s", bucketName, itemName);
+        LOG.error(msg, ioe);
+        throw new FileRetrievalException(msg, ioe);
+    }
+}
+
+
+
+
+
+@GetMapping("/api/files/excel/{filename}")
+public ResponseEntity<Resource> downloadExcelFile(@PathVariable String filename) {
+    byte[] fileData = cosClient.getExcelFile(filename);
+    ByteArrayResource resource = new ByteArrayResource(fileData);
+
+    return ResponseEntity.ok()
+        .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+        .body(resource);
+}
+
+
+
+
+
+@ExceptionHandler(FileRetrievalException.class)
+public ResponseEntity<Map<String, String>> handleFileRetrievalException(FileRetrievalException ex) {
+    Map<String, String> error = new HashMap<>();
+    error.put("error", "File download failed");
+    error.put("message", ex.getMessage());
+
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
