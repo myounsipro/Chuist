@@ -1,0 +1,132 @@
+it('should return true if isLoading is true', () => {
+  component['isLoading'].set(true);
+  component.filters.period = '2024-01';
+
+  expect(component.disabledResearch()).toBe(true);
+});
+
+it('should return true if period is empty', () => {
+  component['isLoading'].set(false);
+  component.filters.period = '';
+
+  expect(component.disabledResearch()).toBe(true);
+});
+
+it('should return false if not loading and period is filled', () => {
+  component['isLoading'].set(false);
+  component.filters.period = '2024-01';
+
+  expect(component.disabledResearch()).toBe(false);
+});
+
+
+
+
+
+
+it('should return true if disabledResearch is true', () => {
+  jest.spyOn(component, 'disabledResearch').mockReturnValue(true);
+  component.invoices.set([{ id: 1 }, { id: 2 }]);
+
+  expect(component.disabledDownload()).toBe(true);
+});
+
+it('should return true if invoices length < 2', () => {
+  jest.spyOn(component, 'disabledResearch').mockReturnValue(false);
+  component.invoices.set([{ id: 1 }]);
+
+  expect(component.disabledDownload()).toBe(true);
+});
+
+it('should return false if disabledResearch is false and invoices >= 2', () => {
+  jest.spyOn(component, 'disabledResearch').mockReturnValue(false);
+  component.invoices.set([{ id: 1 }, { id: 2 }]);
+
+  expect(component.disabledDownload()).toBe(false);
+});
+
+
+
+
+
+
+///////////////
+
+it('should parse and display error message when status is 404 and JSON is valid', () => {
+  const errorMessage = 'Document not found';
+  const error = {
+    status: 404,
+    error: new Blob([JSON.stringify({ error: errorMessage })], { type: 'application/json' })
+  } as any;
+
+  const fileReaderMock = {
+    onload: null as any,
+    readAsText: jest.fn(function () {
+      this.onload({ target: { result: JSON.stringify({ error: errorMessage }) } });
+    })
+  };
+
+  jest.spyOn(window as any, 'FileReader').mockImplementation(() => fileReaderMock);
+
+  component.handleDownloadError(error);
+
+  expect(fileReaderMock.readAsText).toHaveBeenCalledWith(error.error);
+  expect(snackbarPFMock.error).toHaveBeenCalledWith(errorMessage, false, 'error');
+});
+
+
+
+it('should show fallback message when JSON is invalid on 404', () => {
+  const error = {
+    status: 404,
+    error: new Blob(['INVALID_JSON'], { type: 'application/json' })
+  } as any;
+
+  const fileReaderMock = {
+    onload: null as any,
+    readAsText: jest.fn(function () {
+      this.onload({ target: { result: 'INVALID_JSON' } });
+    })
+  };
+
+  jest.spyOn(window as any, 'FileReader').mockImplementation(() => fileReaderMock);
+
+  component.handleDownloadError(error);
+
+  expect(fileReaderMock.readAsText).toHaveBeenCalledWith(error.error);
+  expect(snackbarPFMock.error).toHaveBeenCalledWith(
+    'Erreur : Impossible de récupérer une facture du serveur.',
+    false,
+    'error'
+  );
+});
+
+
+
+
+it('should show permission error for status 403', () => {
+  const error = { status: 403 } as any;
+
+  component.handleDownloadError(error);
+
+  expect(snackbarPFMock.error).toHaveBeenCalledWith(
+    "Vous n'êtes pas autorisé(e) à effectuer cette action.",
+    false,
+    'error'
+  );
+});
+
+
+
+
+it('should show unknown error for other statuses', () => {
+  const error = { status: 500 } as any;
+
+  component.handleDownloadError(error);
+
+  expect(snackbarPFMock.error).toHaveBeenCalledWith(
+    'Une erreur inconnue est survenue.',
+    false,
+    'error'
+  );
+});
