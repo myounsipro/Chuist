@@ -1,30 +1,44 @@
-class CosConfigTest {
+@ExtendWith(MockitoExtension.class)
+class InvoiceFileReaderWriterTest {
 
-    private CosConfig cosConfig;
+    @Mock
+    private InvoiceFileRepository invoiceFileRepository;
 
-    @BeforeEach
-    void setup() {
-        cosConfig = new CosConfig();
+    @InjectMocks
+    private InvoiceFileReaderWriter readerWriter;
 
-        // Injection manuelle via réflexion (car @Value n’est pas actif en test unitaire pur)
-        ReflectionTestUtils.setField(cosConfig, "apikey", "dummy-api-key");
-        ReflectionTestUtils.setField(cosConfig, "serviceInstanceId", "service-id");
-        ReflectionTestUtils.setField(cosConfig, "accessKey", "access-key");
-        ReflectionTestUtils.setField(cosConfig, "secretKey", "secret-key");
+    @Test
+    void shouldGetLatestInvoices() {
+        PaginationRequest request = new PaginationRequest(1, 10);
+        PaginatedResult<InvoiceFile> expected = mock(PaginatedResult.class);
+
+        when(invoiceFileRepository.findLatestInvoiceFiles(request)).thenReturn(expected);
+
+        PaginatedResult<InvoiceFile> result = readerWriter.getLatestInvoices(request);
+
+        assertEquals(expected, result);
     }
 
     @Test
-    void shouldCreateCosClientImpl() {
-        CosProperties props = new CosProperties();
-        props.setBucketName("test-bucket");
-        props.setEndpointUri("https://s3.test.ibm.com");
-        props.setLocation("eu-geo");
-        props.setKeepAlive(true);
-        props.setTimeout(3000);
-        props.setProxyAddress(null);
+    void shouldGetAllByInvoiceDate() {
+        String period = "2024-12";
+        List<InvoiceFile> expected = List.of(mock(InvoiceFile.class));
 
-        CosClientImpl client = cosConfig.cosClient(props);
+        when(invoiceFileRepository.getAllByInvoiceDate(period)).thenReturn(expected);
 
-        assertNotNull(client);
+        List<InvoiceFile> result = readerWriter.getAll(period);
+
+        assertEquals(expected, result);
+    }
+
+    @Test
+    void shouldFindDistinctInvoiceFileDates() {
+        List<String> expected = List.of("2024-01", "2024-02");
+
+        when(invoiceFileRepository.findDistinctInvoiceFileDates()).thenReturn(expected);
+
+        List<String> result = readerWriter.findDistinctInvoiceFileDates();
+
+        assertEquals(expected, result);
     }
 }
