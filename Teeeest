@@ -1,77 +1,51 @@
-@ExtendWith(MockitoExtension.class)
-class CosClientImplTest {
+@Override
+public File downloadExcelFilesAsZip(List<String> filenames) {
+    File zipFile;
+    try {
+        zipFile = File.createTempFile("filtered_invoices_", ".zip");
 
-    @Mock
-    private AmazonS3 amazonS3;
+        try (FileOutputStream fos = new FileOutputStream(zipFile);
+             ZipOutputStream zipOut = new ZipOutputStream(fos)) {
 
-    private CosClientImpl cosClient;
-    private final String bucketName = "my-bucket";
-
-    @BeforeEach
-    void setup() {
-        cosClient = new CosClientImpl(bucketName, amazonS3);
+            for (String filename : filenames) {
+                LOG.info("Downloading file from S3: {}", filename);
+                buildZipFile(zipOut, filename);
+            }
+        }
+    } catch (IOException e) {
+        throw new FileRetrievalException("Failed to create zip archive", e);
     }
 
-    @Test
-    void shouldDownloadExcelFile() throws IOException {
-        String itemName = "test.xlsx";
-        byte[] expectedBytes = "ExcelContent".getBytes();
+    return zipFile;
+}
 
-        S3Object s3Object = mock(S3Object.class);
-        S3ObjectInputStream inputStream = new S3ObjectInputStream(
-            new ByteArrayInputStream(expectedBytes), null
-        );
-
-        when(amazonS3.getObject(any(GetObjectRequest.class))).thenReturn(s3Object);
-        when(s3Object.getObjectContent()).thenReturn(inputStream);
-
-        byte[] result = cosClient.downloadExcelFile(itemName);
-
-        assertArrayEquals(expectedBytes, result);
-        verify(amazonS3).getObject(any(GetObjectRequest.class));
+private void buildZipFile(ZipOutputStream zipOut, String filename) {
+    try {
+        S3Object s3Object = client.getObject(bucketName, filename);
+        try (InputStream in = s3Object.getObjectContent()) {
+            String zipEntryName = extractFileName(filename);
+            zipOut.putNextEntry(new ZipEntry(zipEntryName));
+            in.transferTo(zipOut);
+            zipOut.closeEntry();
+        }
+    } catch (AmazonS3Exception s3e) {
+        if (s3e.getStatusCode() == 404) {
+            String msg = String.format("File not found in S3: %s", filename);
+            LOG.error(msg, s3e);
+            throw new FileNotFoundInS3Exception(filename, s3e);
+        } else {
+            String msg = String.format("Error retrieving file '%s' from S3", filename);
+            LOG.error(msg, s3e);
+            throw new FileRetrievalException(msg, s3e);
+        }
+    } catch (IOException ioe) {
+        String msg = String.format("IO error while processing file '%s'", filename);
+        LOG.error(msg, ioe);
+        throw new FileRetrievalException(msg, ioe);
     }
+}
 
-    @Test
-    void shouldThrowFileRetrievalException_onS3Error() {
-        when(amazonS3.getObject(any(GetObjectRequest.class)))
-            .thenThrow(new AmazonS3Exception("error"));
-
-        assertThrows(FileRetrievalException.class, () ->
-            cosClient.downloadExcelFile("fail.xlsx")
-        );
-    }
-
-    @Test
-    void shouldDownloadExcelFilesAsZip() throws IOException {
-        String filename = "doc.xlsx";
-        byte[] content = "file-content".getBytes();
-
-        S3Object s3Object = mock(S3Object.class);
-        S3ObjectInputStream s3Input = new S3ObjectInputStream(
-            new ByteArrayInputStream(content), null
-        );
-
-        when(amazonS3.getObject(any(GetObjectRequest.class))).thenReturn(s3Object);
-        when(s3Object.getObjectContent()).thenReturn(s3Input);
-
-        File zip = cosClient.downloadExcelFilesAsZip(List.of(filename));
-
-        assertTrue(zip.exists());
-        assertTrue(zip.length() > 0);
-        assertTrue(zip.getName().endsWith(".zip"));
-
-        zip.delete();
-    }
-
-    @Test
-    void shouldThrowFileRetrievalException_whenFileNotFoundInS3() {
-        AmazonS3Exception ex = new AmazonS3Exception("Not found");
-        ex.setStatusCode(404);
-
-        when(amazonS3.getObject(any(GetObjectRequest.class))).thenThrow(ex);
-
-        assertThrows(FileNotFoundInS3Exception.class, () ->
-            cosClient.downloadExcelFilesAsZip(List.of("missing.xlsx"))
-        );
-    }
+private String extractFileName(String fullPath) {
+    int lastSlash = fullPath.lastIndexOf('/');
+    return (lastSlash >= 0) ? fullPath.substring(lastSlash + 1) : fullPath;
 }
