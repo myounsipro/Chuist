@@ -1,56 +1,38 @@
-public enum CosErrorMessage {
-    DOWNLOAD_S3("Retrieving Excel file – bucket: [%s] key: [%s]"),
-    S3_ERROR("S3 error – bucket: %s, key: %s, code: %s"),
-    IO_ERROR("Error reading file from S3 – bucket: %s, key: %s"),
-    FILE_NOT_FOUND("File not found in S3: %s"),
-    ZIP_CREATION("Failed to create zip archive");
+@Test
+void shouldThrowFileRetrievalException_onIOException() {
+    String fileName = "error.xlsx";
+    S3Object s3Object = mock(S3Object.class);
+    InputStream faultyStream = mock(InputStream.class);
 
-    private final String template;
-
-    CosErrorMessage(String template) {
-        this.template = template;
-    }
-
-    public String format(Object... args) {
-        return String.format(template, args);
-    }
-}
-
-
-
-
-
-
-@Override
-public byte[] downloadExcelFile(String itemName) {
-    LOG.info(CosErrorMessage.DOWNLOAD_S3.format(bucketName, itemName));
+    when(amazonS3.getObject(any(GetObjectRequest.class))).thenReturn(s3Object);
+    when(s3Object.getObjectContent()).thenReturn(new S3ObjectInputStream(faultyStream, null));
 
     try {
-        S3Object s3Object = client.getObject(new GetObjectRequest(bucketName, itemName));
-        return s3Object.getObjectContent().readAllBytes();
+        doThrow(new IOException("IO fail")).when(faultyStream).transferTo(any());
+    } catch (IOException ignored) {}
 
-    } catch (AmazonS3Exception ase) {
-        String msg = CosErrorMessage.S3_ERROR.format(bucketName, itemName, ase.getErrorCode());
-        LOG.error(msg, ase);
-        throw new FileRetrievalException(msg, ase);
-    } catch (IOException ioe) {
-        String msg = CosErrorMessage.IO_ERROR.format(bucketName, itemName);
-        LOG.error(msg, ioe);
-        throw new FileRetrievalException(msg, ioe);
-    }
+    FileRetrievalException ex = assertThrows(FileRetrievalException.class, () ->
+        cosClient.downloadExcelFilesAsZip(List.of(fileName))
+    );
+
+    String expected = CosErrorMessage.IO_ERROR.format("my-bucket", fileName);
+    assertTrue(ex.getMessage().contains(expected));
 }
 
 
 
+@Test
+void shouldThrowFileNotFoundInS3Exception_when404() {
+    String fileName = "notfound.xlsx";
+    AmazonS3Exception s3e = new AmazonS3Exception("Not found");
+    s3e.setStatusCode(404);
 
+    when(amazonS3.getObject(any(GetObjectRequest.class))).thenThrow(s3e);
 
+    FileNotFoundInS3Exception ex = assertThrows(FileNotFoundInS3Exception.class, () ->
+        cosClient.downloadExcelFilesAsZip(List.of(fileName))
+    );
 
-if (s3e.getStatusCode() == 404) {
-    String msg = CosErrorMessage.FILE_NOT_FOUND.format(filename);
-    LOG.error(msg, s3e);
-    throw new FileNotFoundInS3Exception(filename, s3e);
+    String expected = CosErrorMessage.FILE_NOT_FOUND.format(fileName);
+    assertTrue(ex.getMessage().contains(expected));
 }
-
-
-
-
