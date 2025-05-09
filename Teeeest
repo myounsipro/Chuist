@@ -1,0 +1,56 @@
+public enum CosErrorMessage {
+    DOWNLOAD_S3("Retrieving Excel file – bucket: [%s] key: [%s]"),
+    S3_ERROR("S3 error – bucket: %s, key: %s, code: %s"),
+    IO_ERROR("Error reading file from S3 – bucket: %s, key: %s"),
+    FILE_NOT_FOUND("File not found in S3: %s"),
+    ZIP_CREATION("Failed to create zip archive");
+
+    private final String template;
+
+    CosErrorMessage(String template) {
+        this.template = template;
+    }
+
+    public String format(Object... args) {
+        return String.format(template, args);
+    }
+}
+
+
+
+
+
+
+@Override
+public byte[] downloadExcelFile(String itemName) {
+    LOG.info(CosErrorMessage.DOWNLOAD_S3.format(bucketName, itemName));
+
+    try {
+        S3Object s3Object = client.getObject(new GetObjectRequest(bucketName, itemName));
+        return s3Object.getObjectContent().readAllBytes();
+
+    } catch (AmazonS3Exception ase) {
+        String msg = CosErrorMessage.S3_ERROR.format(bucketName, itemName, ase.getErrorCode());
+        LOG.error(msg, ase);
+        throw new FileRetrievalException(msg, ase);
+    } catch (IOException ioe) {
+        String msg = CosErrorMessage.IO_ERROR.format(bucketName, itemName);
+        LOG.error(msg, ioe);
+        throw new FileRetrievalException(msg, ioe);
+    }
+}
+
+
+
+
+
+
+if (s3e.getStatusCode() == 404) {
+    String msg = CosErrorMessage.FILE_NOT_FOUND.format(filename);
+    LOG.error(msg, s3e);
+    throw new FileNotFoundInS3Exception(filename, s3e);
+}
+
+
+
+
