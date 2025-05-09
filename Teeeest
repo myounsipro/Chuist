@@ -1,0 +1,37 @@
+@ExtendWith(MockitoExtension.class)
+class SpringDataInvoiceFileRepositoryTest {
+
+    @InjectMocks
+    private SpringDataInvoiceFileRepository repository;
+
+    @Mock
+    private JpaInvoiceFileRepository jpaRepository;
+
+    @Test
+    void shouldReturnInvoiceFileById() {
+        Long id = 42L;
+        InvoiceFileEntity entity = mock(InvoiceFileEntity.class);
+        InvoiceFile file = mock(InvoiceFile.class);
+
+        when(jpaRepository.findById(id)).thenReturn(Optional.of(entity));
+
+        try (MockedStatic<InvoiceFileEntity> mocked = mockStatic(InvoiceFileEntity.class)) {
+            mocked.when(() -> InvoiceFileEntity.toDomain(entity)).thenReturn(file);
+
+            Optional<InvoiceFile> result = repository.getInvoiceFileById(id);
+
+            assertTrue(result.isPresent());
+            assertEquals(file, result.get());
+        }
+    }
+
+    @Test
+    void shouldReturnEmptyIfNotFound() {
+        Long id = 99L;
+        when(jpaRepository.findById(id)).thenReturn(Optional.empty());
+
+        Optional<InvoiceFile> result = repository.getInvoiceFileById(id);
+
+        assertTrue(result.isEmpty());
+    }
+}
