@@ -1,0 +1,56 @@
+@ExtendWith(MockitoExtension.class)
+class SpringDataInvoiceLineRepositoryTest {
+
+    @InjectMocks
+    private SpringDataInvoiceLineRepository repository;
+
+    @Mock
+    private JpaInvoiceLineRepository jpaRepository;
+
+    @Test
+    void shouldSaveInvoiceLine() {
+        InvoiceLine invoiceLine = mock(InvoiceLine.class);
+        InvoiceLineEntity entity = mock(InvoiceLineEntity.class);
+
+        try (MockedStatic<InvoiceLineEntity> mocked = mockStatic(InvoiceLineEntity.class)) {
+            mocked.when(() -> InvoiceLineEntity.from(invoiceLine)).thenReturn(entity);
+
+            repository.save(invoiceLine);
+
+            verify(jpaRepository).save(entity);
+        }
+    }
+
+    @Test
+    void shouldReturnAllInvoiceLines() {
+        List<InvoiceLineEntity> entities = List.of(mock(InvoiceLineEntity.class));
+        List<InvoiceLine> expected = List.of(mock(InvoiceLine.class));
+
+        when(jpaRepository.findAll()).thenReturn(entities);
+
+        try (MockedStatic<InvoiceLineEntity> mocked = mockStatic(InvoiceLineEntity.class)) {
+            mocked.when(() -> InvoiceLineEntity.toDomainList(entities)).thenReturn(expected);
+
+            List<InvoiceLine> result = repository.getAll();
+
+            assertEquals(expected, result);
+        }
+    }
+
+    @Test
+    void shouldReturnInvoiceLinesByInvoiceId() {
+        Long invoiceId = 999L;
+        List<InvoiceLineEntity> entities = List.of(mock(InvoiceLineEntity.class));
+        List<InvoiceLine> expected = List.of(mock(InvoiceLine.class));
+
+        when(jpaRepository.findByInvoiceId(invoiceId)).thenReturn(entities);
+
+        try (MockedStatic<InvoiceLineEntity> mocked = mockStatic(InvoiceLineEntity.class)) {
+            mocked.when(() -> InvoiceLineEntity.toDomainList(entities)).thenReturn(expected);
+
+            List<InvoiceLine> result = repository.getOneByInvoiceId(invoiceId);
+
+            assertEquals(expected, result);
+        }
+    }
+}
