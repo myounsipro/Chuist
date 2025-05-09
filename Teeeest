@@ -1,0 +1,43 @@
+@ExtendWith(MockitoExtension.class)
+class SpringDataInvoiceFileRepositoryTest {
+
+    @InjectMocks
+    private SpringDataInvoiceFileRepository repository;
+
+    @Mock
+    private JpaInvoiceFileRepository jpaRepository;
+
+    @Test
+    void shouldGetInvoiceFileByIds() {
+        List<Long> ids = List.of(1L, 2L);
+        List<InvoiceFileEntity> entities = List.of(mock(InvoiceFileEntity.class), mock(InvoiceFileEntity.class));
+        List<InvoiceFile> domainList = List.of(mock(InvoiceFile.class), mock(InvoiceFile.class));
+
+        when(jpaRepository.findByIdIn(ids)).thenReturn(entities);
+
+        try (MockedStatic<InvoiceFileEntity> mockedStatic = mockStatic(InvoiceFileEntity.class)) {
+            mockedStatic.when(() -> InvoiceFileEntity.toDomainList(entities)).thenReturn(domainList);
+
+            List<InvoiceFile> result = repository.getInvoiceFileByIds(ids);
+
+            assertEquals(2, result.size());
+        }
+    }
+
+    @Test
+    void shouldGetByInvoiceNumber() {
+        String invoiceNumber = "INV-123";
+        List<InvoiceFileEntity> entities = List.of(mock(InvoiceFileEntity.class));
+        List<InvoiceFile> domainList = List.of(mock(InvoiceFile.class));
+
+        when(jpaRepository.findByInvoiceNumber(invoiceNumber)).thenReturn(entities);
+
+        try (MockedStatic<InvoiceFileEntity> mockedStatic = mockStatic(InvoiceFileEntity.class)) {
+            mockedStatic.when(() -> InvoiceFileEntity.toDomainList(entities)).thenReturn(domainList);
+
+            List<InvoiceFile> result = repository.getByInvoiceNumber(invoiceNumber);
+
+            assertEquals(1, result.size());
+        }
+    }
+}
