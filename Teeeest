@@ -1,0 +1,45 @@
+@Test
+void testFromList() {
+    List<Invoice> invoices = new ArrayList<>();
+
+    Invoice invoice1 = mock(Invoice.class);
+    Invoice invoice2 = mock(Invoice.class);
+
+    when(invoice1.getId()).thenReturn(1L);
+    when(invoice2.getId()).thenReturn(2L);
+    // tu peux configurer d'autres champs si nécessaire
+
+    invoices.add(invoice1);
+    invoices.add(invoice2);
+
+    List<InvoiceEntity> invoiceEntities = InvoiceEntity.fromList(invoices);
+
+    assertEquals(2, invoiceEntities.size());
+    assertEquals(1L, invoiceEntities.get(0).getId());
+    assertEquals(2L, invoiceEntities.get(1).getId());
+}
+
+
+@Test
+void testToDomainList() {
+    List<InvoiceEntity> invoiceEntities = new ArrayList<>();
+
+    InvoiceEntity invoiceEntity1 = mock(InvoiceEntity.class);
+    InvoiceEntity invoiceEntity2 = mock(InvoiceEntity.class);
+
+    Invoice invoice1 = mock(Invoice.class);
+    Invoice invoice2 = mock(Invoice.class);
+
+    when(invoiceEntity1.toDomain()).thenReturn(invoice1);
+    when(invoiceEntity2.toDomain()).thenReturn(invoice2);
+
+    invoiceEntities.add(invoiceEntity1);
+    invoiceEntities.add(invoiceEntity2);
+
+    List<Invoice> invoices = InvoiceEntity.toDomainList(invoiceEntities);
+
+    assertEquals(2, invoices.size());
+}
+
+
+
