@@ -1,0 +1,74 @@
+@ExtendWith(MockitoExtension.class)
+class CosClientImplTest {
+
+    @Mock
+    private AmazonS3 amazonS3;
+
+    @InjectMocks
+    private CosClientImpl cosClient;
+
+    private final String bucketName = "my-bucket";
+
+    @BeforeEach
+    void setup() {
+        cosClient = new CosClientImpl(bucketName, amazonS3);
+    }
+
+    @Test
+    void shouldDownloadExcelFile() throws IOException {
+        String itemName = "test.xlsx";
+        byte[] expectedBytes = "ExcelContent".getBytes();
+        S3Object s3Object = mock(S3Object.class);
+        S3ObjectInputStream inputStream = new S3ObjectInputStream(
+                new ByteArrayInputStream(expectedBytes), null);
+
+        when(amazonS3.getObject(any(GetObjectRequest.class))).thenReturn(s3Object);
+        when(s3Object.getObjectContent()).thenReturn(inputStream);
+
+        byte[] result = cosClient.downloadExcelFile(itemName);
+
+        assertArrayEquals(expectedBytes, result);
+        verify(amazonS3).getObject(new GetObjectRequest(bucketName, itemName));
+    }
+
+    @Test
+    void shouldThrowFileRetrievalException_onS3Exception() {
+        String itemName = "file.xlsx";
+        when(amazonS3.getObject(any(GetObjectRequest.class)))
+            .thenThrow(new AmazonS3Exception("S3 failed"));
+
+        assertThrows(FileRetrievalException.class, () -> cosClient.downloadExcelFile(itemName));
+    }
+
+    @Test
+    void shouldDownloadExcelFilesAsZip() throws IOException {
+        String filename = "doc.xlsx";
+        byte[] fileBytes = "file-content".getBytes();
+
+        S3Object s3Object = mock(S3Object.class);
+        S3ObjectInputStream s3Input = new S3ObjectInputStream(new ByteArrayInputStream(fileBytes), null);
+        when(amazonS3.getObject(new GetObjectRequest(bucketName, filename))).thenReturn(s3Object);
+        when(s3Object.getObjectContent()).thenReturn(s3Input);
+
+        File zip = cosClient.downloadExcelFilesAsZip(List.of(filename));
+
+        assertTrue(zip.exists());
+        assertTrue(zip.getName().endsWith(".zip"));
+        assertTrue(zip.length() > 0);
+
+        zip.delete(); // clean temp file
+    }
+
+    @Test
+    void shouldThrowFileRetrievalException_whenFileNotFoundInS3() {
+        String filename = "missing.xlsx";
+        AmazonS3Exception ex = new AmazonS3Exception("Not found");
+        ex.setStatusCode(404);
+
+        when(amazonS3.getObject(new GetObjectRequest(bucketName, filename))).thenThrow(ex);
+
+        assertThrows(FileNotFoundInS3Exception.class, () -> {
+            cosClient.downloadExcelFilesAsZip(List.of(filename));
+        });
+    }
+}
