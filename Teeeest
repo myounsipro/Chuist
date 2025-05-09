@@ -1,45 +1,30 @@
-@ExtendWith(MockitoExtension.class)
 class CosConfigTest {
 
-    @InjectMocks
     private CosConfig cosConfig;
 
-    @Mock
-    private CosProperties cosProperties;
+    @BeforeEach
+    void setup() {
+        cosConfig = new CosConfig();
+
+        // Injection manuelle via réflexion (car @Value n’est pas actif en test unitaire pur)
+        ReflectionTestUtils.setField(cosConfig, "apikey", "dummy-api-key");
+        ReflectionTestUtils.setField(cosConfig, "serviceInstanceId", "service-id");
+        ReflectionTestUtils.setField(cosConfig, "accessKey", "access-key");
+        ReflectionTestUtils.setField(cosConfig, "secretKey", "secret-key");
+    }
 
     @Test
-    void shouldCreateCosClient() {
-        // Mock CosProperties getters
-        when(cosProperties.getBucketName()).thenReturn("test-bucket");
-        when(cosProperties.getApiKey()).thenReturn("dummy-api-key");
-        when(cosProperties.getServiceInstanceId()).thenReturn("dummy-instance-id");
-        when(cosProperties.getAccessKey()).thenReturn("access");
-        when(cosProperties.getSecretKey()).thenReturn("secret");
-        when(cosProperties.getEndpointUri()).thenReturn("https://s3.test.ibm.com");
-        when(cosProperties.getLocation()).thenReturn("eu-geo");
-        when(cosProperties.getTimeout()).thenReturn(5000);
-        when(cosProperties.getKeepAlive()).thenReturn(true);
-        when(cosProperties.getProxyAddress()).thenReturn(null);
+    void shouldCreateCosClientImpl() {
+        CosProperties props = new CosProperties();
+        props.setBucketName("test-bucket");
+        props.setEndpointUri("https://s3.test.ibm.com");
+        props.setLocation("eu-geo");
+        props.setKeepAlive(true);
+        props.setTimeout(3000);
+        props.setProxyAddress(null);
 
-        CosClientImpl client = cosConfig.cosClient(cosProperties);
+        CosClientImpl client = cosConfig.cosClient(props);
 
         assertNotNull(client);
     }
-}
-
-
-@Test
-void shouldCreateAmazonS3Client() {
-    when(cosProperties.getApiKey()).thenReturn("key");
-    when(cosProperties.getServiceInstanceId()).thenReturn("instance");
-    when(cosProperties.getAccessKey()).thenReturn("access");
-    when(cosProperties.getSecretKey()).thenReturn("secret");
-    when(cosProperties.getEndpointUri()).thenReturn("https://s3.test.ibm.com");
-    when(cosProperties.getLocation()).thenReturn("eu-geo");
-    when(cosProperties.getTimeout()).thenReturn(5000);
-    when(cosProperties.getKeepAlive()).thenReturn(true);
-    when(cosProperties.getProxyAddress()).thenReturn(null);
-
-    AmazonS3 client = ReflectionTestUtils.invokeMethod(cosConfig, "createClient", cosProperties);
-    assertNotNull(client);
 }
