@@ -1,44 +1,110 @@
 @ExtendWith(MockitoExtension.class)
-class InvoiceFileReaderWriterTest {
+class CompanyReaderTest {
 
     @Mock
-    private InvoiceFileRepository invoiceFileRepository;
+    private IssuerRepository issuerRepository;
+
+    @Mock
+    private InsurerRepository insurerRepository;
 
     @InjectMocks
-    private InvoiceFileReaderWriter readerWriter;
+    private CompanyReader companyReader;
 
     @Test
-    void shouldGetLatestInvoices() {
-        PaginationRequest request = new PaginationRequest(1, 10);
-        PaginatedResult<InvoiceFile> expected = mock(PaginatedResult.class);
+    void shouldGetByCompanyKey() {
+        Integer companyKey = 123;
+        Issuer issuer = mock(Issuer.class);
+        when(issuerRepository.getOneByCompanyKey(companyKey)).thenReturn(Optional.of(issuer));
 
-        when(invoiceFileRepository.findLatestInvoiceFiles(request)).thenReturn(expected);
+        Optional<Issuer> result = companyReader.getByCompanyKey(companyKey);
 
-        PaginatedResult<InvoiceFile> result = readerWriter.getLatestInvoices(request);
-
-        assertEquals(expected, result);
+        assertTrue(result.isPresent());
+        assertEquals(issuer, result.get());
     }
 
     @Test
-    void shouldGetAllByInvoiceDate() {
-        String period = "2024-12";
-        List<InvoiceFile> expected = List.of(mock(InvoiceFile.class));
+    void shouldGetBySirenNumber() {
+        String siren = "123456789";
+        Insurer insurer = mock(Insurer.class);
+        when(insurerRepository.getOneBySirenNumber(siren)).thenReturn(Optional.of(insurer));
 
-        when(invoiceFileRepository.getAllByInvoiceDate(period)).thenReturn(expected);
+        Optional<Insurer> result = companyReader.getBySirenNumber(siren);
 
-        List<InvoiceFile> result = readerWriter.getAll(period);
-
-        assertEquals(expected, result);
+        assertTrue(result.isPresent());
+        assertEquals(insurer, result.get());
     }
 
     @Test
-    void shouldFindDistinctInvoiceFileDates() {
-        List<String> expected = List.of("2024-01", "2024-02");
+    void shouldGetByFullName() {
+        String fullName = "Assureur A";
+        Insurer insurer = mock(Insurer.class);
+        when(insurerRepository.getOneByFullName(fullName)).thenReturn(Optional.of(insurer));
 
-        when(invoiceFileRepository.findDistinctInvoiceFileDates()).thenReturn(expected);
+        Optional<Insurer> result = companyReader.getByFullName(fullName);
 
-        List<String> result = readerWriter.findDistinctInvoiceFileDates();
+        assertTrue(result.isPresent());
+        assertEquals(insurer, result.get());
+    }
 
-        assertEquals(expected, result);
+    @Test
+    void shouldGetAllInsurers() {
+        List<Insurer> insurers = List.of(mock(Insurer.class));
+        when(insurerRepository.getAll()).thenReturn(insurers);
+
+        List<Insurer> result = companyReader.getAllInsurers();
+
+        assertEquals(insurers, result);
+    }
+
+    @Test
+    void shouldGetAllRestInsurersSorted() {
+        Insurer insurer1 = mock(Insurer.class);
+        Insurer insurer2 = mock(Insurer.class);
+        when(insurer1.getFullName()).thenReturn("Zeta");
+        when(insurer2.getFullName()).thenReturn("Alpha");
+        when(insurerRepository.getAll()).thenReturn(List.of(insurer1, insurer2));
+
+        RestInsurer rest1 = mock(RestInsurer.class);
+        RestInsurer rest2 = mock(RestInsurer.class);
+
+        try (MockedStatic<RestInsurer> mockStatic = mockStatic(RestInsurer.class)) {
+            mockStatic.when(() -> RestInsurer.from(insurer1)).thenReturn(rest1);
+            mockStatic.when(() -> RestInsurer.from(insurer2)).thenReturn(rest2);
+
+            List<RestInsurer> result = companyReader.getAllRestInsurers();
+
+            assertEquals(List.of(rest2, rest1), result); // sorted by name
+        }
+    }
+
+    @Test
+    void shouldGetAllIssuers() {
+        List<Issuer> issuers = List.of(mock(Issuer.class));
+        when(issuerRepository.getAll()).thenReturn(issuers);
+
+        List<Issuer> result = companyReader.getAllIssuers();
+
+        assertEquals(issuers, result);
+    }
+
+    @Test
+    void shouldGetAllRestIssuersSorted() {
+        Issuer issuer1 = mock(Issuer.class);
+        Issuer issuer2 = mock(Issuer.class);
+        when(issuer1.getFullName()).thenReturn("Zeta");
+        when(issuer2.getFullName()).thenReturn("Alpha");
+        when(issuerRepository.getAll()).thenReturn(List.of(issuer1, issuer2));
+
+        RestIssuer rest1 = mock(RestIssuer.class);
+        RestIssuer rest2 = mock(RestIssuer.class);
+
+        try (MockedStatic<RestIssuer> mockStatic = mockStatic(RestIssuer.class)) {
+            mockStatic.when(() -> RestIssuer.from(issuer1)).thenReturn(rest1);
+            mockStatic.when(() -> RestIssuer.from(issuer2)).thenReturn(rest2);
+
+            List<RestIssuer> result = companyReader.getAllRestIssuers();
+
+            assertEquals(List.of(rest2, rest1), result); // sorted
+        }
     }
 }
