@@ -1,45 +1,65 @@
-@Test
-void testFromList() {
-    List<Invoice> invoices = new ArrayList<>();
+@ExtendWith(MockitoExtension.class)
+class FileDownloadControllerTest {
 
-    Invoice invoice1 = mock(Invoice.class);
-    Invoice invoice2 = mock(Invoice.class);
+    @InjectMocks
+    private FileDownloadController controller;
 
-    when(invoice1.getId()).thenReturn(1L);
-    when(invoice2.getId()).thenReturn(2L);
-    // tu peux configurer d'autres champs si nécessaire
+    @Mock
+    private InvoiceFileApplicationService invoiceFileApplicationService;
 
-    invoices.add(invoice1);
-    invoices.add(invoice2);
+    @Test
+    void shouldDownloadExcelFile() {
+        Long invoiceId = 123L;
+        byte[] fileData = "test-data".getBytes();
 
-    List<InvoiceEntity> invoiceEntities = InvoiceEntity.fromList(invoices);
+        when(invoiceFileApplicationService.downloadExcelFile(invoiceId)).thenReturn(fileData);
 
-    assertEquals(2, invoiceEntities.size());
-    assertEquals(1L, invoiceEntities.get(0).getId());
-    assertEquals(2L, invoiceEntities.get(1).getId());
+        ResponseEntity<Resource> response = controller.downloadExcelFile(invoiceId);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(MediaType.APPLICATION_OCTET_STREAM, response.getHeaders().getContentType());
+        assertTrue(response.getHeaders().getContentDisposition().getFilename().startsWith("FILE-NAME"));
+        assertArrayEquals(fileData, ((ByteArrayResource) response.getBody()).getByteArray());
+    }
+
+    @Test
+    void shouldDownloadZipFile() {
+        List<Long> invoiceIds = List.of(1L, 2L);
+        File zipFile = new File("test.zip");
+        Map<Long, String> invoiceFileMap = new HashMap<>();
+        invoiceFileMap.put(1L, "file1.xlsx");
+        invoiceFileMap.put(2L, "file2.xlsx");
+
+        when(invoiceFileApplicationService.getInvoiceFileByIds(invoiceIds)).thenReturn(invoiceFileMap);
+        when(invoiceFileApplicationService.downloadExcelFilesAsZip("file1.xlsx", "file2.xlsx"))
+            .thenReturn(zipFile);
+
+        ResponseEntity<Resource> response = controller.downloadZip(invoiceIds);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(MediaType.APPLICATION_OCTET_STREAM, response.getHeaders().getContentType());
+        assertTrue(response.getHeaders().getContentDisposition().getFilename().contains("factures_"));
+        assertEquals(zipFile, ((FileSystemResource) response.getBody()).getFile());
+    }
+
+    @Test
+    void shouldHandleFileRetrievalException() {
+        FileRetrievalException ex = new FileRetrievalException("error message");
+
+        ResponseEntity<Map<String, String>> response = controller.handleFileRetrievalException(ex);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertEquals("File download failed", response.getBody().get("error"));
+        assertEquals("error message", response.getBody().get("message"));
+    }
+
+    @Test
+    void shouldHandleFileNotFoundInS3Exception() {
+        FileNotFoundInS3Exception ex = new FileNotFoundInS3Exception("not_found.xlsx");
+
+        ResponseEntity<Map<String, String>> response = controller.handleFileNotFoundInS3Exception(ex);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals("File not found: not_found.xlsx", response.getBody().get("error"));
+    }
 }
-
-
-@Test
-void testToDomainList() {
-    List<InvoiceEntity> invoiceEntities = new ArrayList<>();
-
-    InvoiceEntity invoiceEntity1 = mock(InvoiceEntity.class);
-    InvoiceEntity invoiceEntity2 = mock(InvoiceEntity.class);
-
-    Invoice invoice1 = mock(Invoice.class);
-    Invoice invoice2 = mock(Invoice.class);
-
-    when(invoiceEntity1.toDomain()).thenReturn(invoice1);
-    when(invoiceEntity2.toDomain()).thenReturn(invoice2);
-
-    invoiceEntities.add(invoiceEntity1);
-    invoiceEntities.add(invoiceEntity2);
-
-    List<Invoice> invoices = InvoiceEntity.toDomainList(invoiceEntities);
-
-    assertEquals(2, invoices.size());
-}
-
-
-
