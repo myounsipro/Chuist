@@ -1,0 +1,15 @@
+Path tempFilePath;
+
+if (SystemUtils.IS_OS_UNIX) {
+    Set<PosixFilePermission> perms = PosixFilePermissions.fromString("rw-------");
+    FileAttribute<Set<PosixFilePermission>> attr = PosixFilePermissions.asFileAttribute(perms);
+    tempFilePath = Files.createTempFile("filtered_invoices_", ".zip", attr);
+} else {
+    tempFilePath = Files.createTempFile("filtered_invoices_", ".zip");
+    File file = tempFilePath.toFile();
+    file.setReadable(true, true);
+    file.setWritable(true, true);
+    file.setExecutable(false, true);
+}
+
+File zipFile = tempFilePath.toFile();
