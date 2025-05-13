@@ -1,0 +1,85 @@
+import { Component, inject, OnInit } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { AuthService } from '../services/auth.service'; // adapte le chemin
+
+@Component({
+  selector: 'app-auth-callback',
+  template: `<p>Connexion en cours...</p>`,
+})
+export class AuthCallbackComponent implements OnInit {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private authService = inject(AuthService);
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(async (params) => {
+      const code = params['code'];
+      const state = params['state'];
+      const nonce = params['nonce'];
+
+      if (code && state) {
+        try {
+          await this.authService.handleOAuthCallback({ code, state, nonce });
+
+          // Rediriger vers la home ou vers la dernière route stockée
+          const redirectUrl = sessionStorage.getItem('redirectAfterLogin') || '/home';
+          this.router.navigateByUrl(redirectUrl);
+        } catch (err) {
+          console.error('Erreur auth callback', err);
+          this.router.navigate(['/error']);
+        }
+      } else {
+        // Pas de code ? Revenir à la page d’accueil
+        this.router.navigate(['/home']);
+      }
+    });
+  }
+}
+
+
+
+
+
+
+@Injectable({ providedIn: 'root' })
+export class AuthService {
+  constructor(private http: HttpClient) {}
+
+  async handleOAuthCallback(data: { code: string; state: string; nonce?: string }): Promise<void> {
+    const response = await firstValueFrom(
+      this.http.post('/api/auth/callback', data) // backend traite code/token
+    );
+
+    // Exemple : enregistrer le token
+    localStorage.setItem('access_token', response['accessToken']);
+    // Tu peux aussi remplir un signal user, etc.
+  }
+}
+
+
+
+
+
+sessionStorage.setItem('redirectAfterLogin', this.router.url);
+
+
+
+<div class="auth-loading">
+  <mat-spinner></mat-spinner>
+  <p>Connexion sécurisée en cours...</p>
+</div>
+
+
+
+
+.auth-loading {
+  display: flex;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+
+
+
