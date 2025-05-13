@@ -1,0 +1,104 @@
+@Injectable({ providedIn: 'root' })
+export class DashboardService {
+  constructor(private http: HttpClient) {}
+
+  getInvoiceCount(): Observable<number> {
+    return this.http.get<number>('/api/invoices/count');
+  }
+
+  getJobStatus(): Observable<{ status: string; lastRun: string }> {
+    return this.http.get('/api/jobs/status');
+  }
+
+  getAlerts(): Observable<Array<{ message: string }>> {
+    return this.http.get('/api/alerts');
+  }
+
+
+
+
+
+
+
+
+
+
+@Component({
+  selector: 'app-home',
+  templateUrl: './home.component.html',
+})
+export class HomeComponent implements OnInit {
+  private dashboard = inject(DashboardService);
+
+  nbInvoices = signal<number | null>(null);
+  jobStatus = signal<{ status: string; lastRun: string } | null>(null);
+  alerts = signal<Array<{ message: string }>>([]);
+
+  ngOnInit(): void {
+    this.dashboard.getInvoiceCount().subscribe(this.nbInvoices.set);
+    this.dashboard.getJobStatus().subscribe(this.jobStatus.set);
+    this.dashboard.getAlerts().subscribe(this.alerts.set);
+  }
+}
+
+
+
+
+
+
+<main class="p-6">
+  <h1 class="text-2xl font-semibold mb-4">Tableau de bord</h1>
+
+  <div class="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+
+    <!-- Factures -->
+    <mat-card>
+      <mat-card-title>Factures générées</mat-card-title>
+      <mat-card-content>
+        <ng-container *ngIf="nbInvoices(); else loading">
+          <span class="text-3xl font-bold">{{ nbInvoices() }}</span>
+        </ng-container>
+        <ng-template #loading>
+          <mat-progress-spinner diameter="30" mode="indeterminate"></mat-progress-spinner>
+        </ng-template>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Jobs -->
+    <mat-card>
+      <mat-card-title>État des jobs</mat-card-title>
+      <mat-card-content>
+        <ng-container *ngIf="jobStatus(); else loadingJobs">
+          <div>Status : <strong>{{ jobStatus().status }}</strong></div>
+          <div>Dernier run : {{ jobStatus().lastRun | date:'short' }}</div>
+        </ng-container>
+        <ng-template #loadingJobs>
+          <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+        </ng-template>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Alertes -->
+    <mat-card>
+      <mat-card-title>Alertes</mat-card-title>
+      <mat-card-content>
+        <ng-container *ngIf="alerts().length; else noAlert">
+          <ul>
+            <li *ngFor="let alert of alerts()">{{ alert.message }}</li>
+          </ul>
+        </ng-container>
+        <ng-template #noAlert>
+          <p>Aucune alerte en cours</p>
+        </ng-template>
+      </mat-card-content>
+    </mat-card>
+
+  </div>
+</main>
+
+
+
+
+
+
+
