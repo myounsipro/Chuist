@@ -202,3 +202,29 @@ exportToExcel(): void {
 
 
 
+
+
+
+<!-- Utilisation simplifiée avec Angular 19 -->
+<mat-accordion>
+  <mat-expansion-panel *ngFor="let category of getAlertsByCategory() | keyvalue">
+    <mat-expansion-panel-header>
+      <mat-panel-title>{{ category.key }}</mat-panel-title>
+      <mat-panel-description>
+        {{ category.value.length }} alertes
+      </mat-panel-description>
+    </mat-expansion-panel-header>
+
+    <mat-list dense>
+      <mat-list-item *ngFor="let alert of category.value">
+        <mat-icon matListItemIcon [color]="alert.severity">
+          {{ getAlertIcon(alert.severity) }}
+        </mat-icon>
+        <div matListItemTitle>{{ alert.type }}</div>
+        <div matListItemLine *ngIf="alert.timestamp">
+          {{ alert.timestamp | date:'dd/MM/yyyy HH:mm' }}
+        </div>
+      </mat-list-item>
+    </mat-list>
+  </mat-expansion-panel>
+</mat-accordion>
