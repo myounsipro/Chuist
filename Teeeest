@@ -1,57 +1,59 @@
-import { Component, OnInit } from '@angular/core';
-import { ChartConfiguration } from 'chart.js';
+// Mettez à jour votre interface/modèle pour les alertes
+interface Alert {
+  id: number;
+  category: string;  // "États-Unis", "Tours généralement", etc.
+  type: string;      // "Échec", "Factures générées", "Méthode Facteur"
+  severity: 'warning' | 'error' | 'info';
+  timestamp?: Date;
+}
 
-@Component({
-  selector: 'app-dashboard',
-  templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.scss']
-})
-export class DashboardComponent implements OnInit {
-  // Données pour les cartes
-  invoicesStats = {
-    success: 65,
-    failure: 0,
-    total: 65
-  };
-
-  jobStatus = {
-    status: 'up',
-    lastRun: new Date('2025-05-14T10:30:00')
-  };
-
-  alerts = [
-    { id: 1, message: 'Espace disque faible', severity: 'warning' },
-    { id: 2, message: 'Mise à jour disponible', severity: 'info' }
+@Component({...})
+export class DashboardComponent {
+  // Mettez à jour vos données d'alertes
+  alerts: Alert[] = [
+    { 
+      id: 1, 
+      category: 'États-Unis', 
+      type: 'Échec', 
+      severity: 'error',
+      timestamp: new Date('2025-05-14T10:15:00')
+    },
+    { 
+      id: 2, 
+      category: 'États-Unis', 
+      type: 'Factures générées', 
+      severity: 'info' 
+    },
+    { 
+      id: 3, 
+      category: 'États-Unis', 
+      type: 'Méthode Facteur', 
+      severity: 'warning' 
+    },
+    { 
+      id: 4, 
+      category: 'Tours généralement', 
+      type: 'Tourisme générique', 
+      severity: 'info' 
+    },
+    { 
+      id: 5, 
+      category: 'Tours généralement', 
+      type: 'Échec', 
+      severity: 'error' 
+    },
+    // ... autres alertes
   ];
 
-  // Données pour le graphique
-  public barChartData: ChartConfiguration<'bar'>['data'] = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mai', 'Jun', 'Jul'],
-    datasets: [
-      { 
-        data: [30, 80, 70, 60, 50, 40, 30], 
-        label: 'Factures générées',
-        backgroundColor: '#3f51b5'
+  // Fonction pour grouper les alertes par catégorie
+  getAlertsByCategory() {
+    return this.alerts.reduce((acc, alert) => {
+      if (!acc[alert.category]) {
+        acc[alert.category] = [];
       }
-    ]
-  };
-
-  public barChartOptions: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    scales: {
-      y: {
-        beginAtZero: true
-      }
-    }
-  };
-
-  ngOnInit(): void {
-    // Ici vous pourriez faire des appels API pour récupérer les données
-  }
-
-  generateNewInvoice(): void {
-    // Logique pour générer une nouvelle facture
-    console.log('Nouvelle facture demandée');
+      acc[alert.category].push(alert);
+      return acc;
+    }, {} as Record<string, Alert[]>);
   }
 }
 
@@ -61,91 +63,40 @@ export class DashboardComponent implements OnInit {
 
 
 
-
-<div class="dashboard-container">
-  <!-- En-tête -->
-  <div class="dashboard-header">
-    <h1>Tableau de Bord Facturation</h1>
-    <button mat-raised-button color="primary" (click)="generateNewInvoice()">
-      <mat-icon>add</mat-icon> Nouvelle Facture
-    </button>
-  </div>
-
-  <!-- Cartes de statistiques -->
-  <div class="dashboard-cards">
-    <!-- Carte Statistiques Factures -->
-    <mat-card class="dashboard-card">
-      <mat-card-header>
-        <mat-card-title>Factures générées</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="stats-container">
-          <div class="stat-item success">
-            <span class="stat-value">{{ invoicesStats.success }}</span>
-            <span class="stat-label">Succès</span>
-          </div>
-          <div class="stat-item failure">
-            <span class="stat-value">{{ invoicesStats.failure }}</span>
-            <span class="stat-label">Échec</span>
-          </div>
-        </div>
-        <mat-progress-bar 
-          mode="determinate" 
-          [value]="(invoicesStats.success / invoicesStats.total) * 100" 
-          color="primary">
-        </mat-progress-bar>
-      </mat-card-content>
-    </mat-card>
-
-    <!-- Carte État des Jobs -->
-    <mat-card class="dashboard-card">
-      <mat-card-header>
-        <mat-card-title>État des Jobs</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="job-status" [class.up]="jobStatus.status === 'up'">
-          <mat-icon>{{ jobStatus.status === 'up' ? 'check_circle' : 'error' }}</mat-icon>
-          <span>Status: {{ jobStatus.status | uppercase }}</span>
-        </div>
-        <div class="last-run">
-          Dernier run: {{ jobStatus.lastRun | date:'dd-MM-yyyy HH:mm' }}
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <!-- Carte Alertes -->
-    <mat-card class="dashboard-card">
-      <mat-card-header>
-        <mat-card-title>Alertes</mat-card-title>
-        <span class="badge">{{ alerts.length }}</span>
-      </mat-card-header>
-      <mat-card-content>
-        <mat-list>
-          <mat-list-item *ngFor="let alert of alerts">
-            <mat-icon mat-list-icon [color]="alert.severity">{{ 
-              alert.severity === 'warning' ? 'warning' : 'info' 
-            }}</mat-icon>
-            <div mat-line>{{ alert.message }}</div>
-          </mat-list-item>
-        </mat-list>
-      </mat-card-content>
-    </mat-card>
-  </div>
-
-  <!-- Graphique -->
-  <mat-card class="chart-card">
-    <mat-card-header>
-      <mat-card-title>Factures générées par mois</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <canvas baseChart 
-        [data]="barChartData"
-        [options]="barChartOptions"
-        [type]="'bar'">
-      </canvas>
-    </mat-card-content>
-  </mat-card>
-</div>
+<mat-card class="dashboard-card">
+  <mat-card-header>
+    <mat-card-title>Alertes</mat-card-title>
+    <span class="badge">{{ alerts.length }}</span>
+  </mat-card-header>
+  <mat-card-content>
+    <mat-accordion>
+      <ng-container *ngFor="let category of getAlertsByCategory() | keyvalue">
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              {{ category.key }}
+            </mat-panel-title>
+            <mat-panel-description>
+              {{ category.value.length }} alertes
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+          
+          <mat-list dense>
+            <mat-list-item *ngFor="let alert of category.value">
+              <mat-icon mat-list-icon [color]="alert.severity">
+                {{ getAlertIcon(alert.severity) }}
+              </mat-icon>
+              <div mat-line>{{ alert.type }}</div>
+              <div mat-line *ngIf="alert.timestamp" class="timestamp">
+                {{ alert.timestamp | date:'dd/MM/yyyy HH:mm' }}
+              </div>
+            </mat-list-item>
+          </mat-list>
+        </mat-expansion-panel>
+      </ng-container>
+    </mat-accordion>
+  </mat-card-content>
+</mat-card>
 
 
 
@@ -155,83 +106,68 @@ export class DashboardComponent implements OnInit {
 
 
 
-
-.dashboard-container {
-  padding: 20px;
+getAlertIcon(severity: string): string {
+  switch(severity) {
+    case 'error': return 'error';
+    case 'warning': return 'warning';
+    default: return 'info';
+  }
 }
 
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
 
-.dashboard-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-  margin-bottom: 20px;
-}
 
-.dashboard-card {
-  height: 100%;
-}
 
-.stats-container {
-  display: flex;
-  justify-content: space-around;
-  margin: 20px 0;
-}
 
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+
+
+
+
+
+// Styles pour les alertes
+.mat-expansion-panel {
+  margin-bottom: 8px;
   
-  .stat-value {
-    font-size: 2rem;
-    font-weight: bold;
-  }
-
-  &.success .stat-value {
-    color: #4caf50;
-  }
-
-  &.failure .stat-value {
-    color: #f44336;
+  .mat-expansion-panel-header {
+    padding: 0 16px;
   }
 }
 
-.job-status {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-  
-  mat-icon {
-    margin-right: 10px;
-  }
-
-  &.up {
-    color: #4caf50;
-  }
+.timestamp {
+  font-size: 0.75rem;
+  color: rgba(0, 0, 0, 0.54);
 }
 
-.badge {
-  background: #f44336;
-  color: white;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
+// Couleurs pour les différents types d'alertes
+.mat-icon[color="error"] {
+  color: #f44336;
 }
 
-.chart-card {
-  margin-top: 20px;
+.mat-icon[color="warning"] {
+  color: #ff9800;
 }
+
+.mat-icon[color="info"] {
+  color: #2196f3;
+}
+
+
+
+
+
+
+
+// Ajoutez dans votre composant
+markAsResolved(alertId: number): void {
+  this.alerts = this.alerts.filter(a => a.id !== alertId);
+  // Ici vous pourriez aussi faire un appel API pour mettre à jour le backend
+}
+
+// Et dans le template, ajoutez un bouton de fermeture :
+<button mat-icon-button (click)="markAsResolved(alert.id)">
+  <mat-icon>close</mat-icon>
+</button>
+
+
 
 
 
