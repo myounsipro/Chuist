@@ -1,46 +1,75 @@
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
+public enum InsuranceHeader {
+    // Société et contrat
+    FINANCIAL_COMPANY("financialCompany", "SOCIÉTÉ FINANCIÈRE"),
+    GROUP_CONTRACT_NUMBER("groupContractNumber", "N° CONTRAT GROUPE"),
+    CONVENTION_OR_POLICE("conventionOrPolicy", "CONVENTION/POLICE"),
+    SUB_CONVENTION_TYPE("subConventionType", "SOUS TYPE CONVENTION"),
+    AMENDMENT("amendment", "AVENANT"),
+    MANDATE("mandate", "MANDAT"),
+    
+    // Produit et primes
+    INSURANCE_OPTION_OR_RISK("insuranceOptionOrRisk", "OPTION D'ASSURANCE / RISQUE"),
+    PRODUCT_LABEL("productLabel", "LIBELLÉ PRODUIT"),
+    PRODUCT_CODE("productCode", "CODE PRODUIT"),
+    TOTAL_PREMIUM_INCLUDING_TAX("totalPremiumIncludingTax", "TOTAL PRIME TTC"),
+    TOTAL_PREMIUM_EXCLUDING_TAX("totalPremiumExcludingTax", "TOTAL PRIME HT"),
+    TOTAL_VAT("totalVat", "TOTAL TVA"),
+    
+    // Commissions
+    NUMBER_OF_FILES("numberOfFiles", "NOMBRE DOSSIERS"),
+    UNIT_COMMISSION_PER_FILE("unitCommissionPerFile", "COMMISSION UNITAIRE PAR DOSSIER (TTC)"),
+    MANAGEMENT_COMMISSION_RATE("managementCommissionRate", "TAUX COMMISSION GESTION"),
+    MANAGEMENT_COMMISSION("managementCommission", "COMMISSION GESTION"),
+    BROKERAGE_COMMISSION_RATE("brokerageCommissionRate", "TAUX COMMISSION COURTAGE"),
+    BROKERAGE_COMMISSION("brokerageCommission", "COMMISSION COURTAGE"),
+    TOTAL_COMMISSIONS("totalCommissions", "TOTAL COMMISSIONS"),
+    
+    // Sinistres
+    SETTLED_CLAIMS_DEATH("settledClaimsDeath", "SINISTRES REGLÉS DÉCÈS"),
+    SETTLED_CLAIMS_DISABILITY("settledClaimsDisability", "SINISTRES REGLÉS INCAPACITÉ"),
+    SETTLED_CLAIMS_UNEMPLOYMENT("settledClaimsUnemployment", "SINISTRES REGLÉS CHÔMAGE"),
+    SETTLED_CLAIMS_OTHERS("settledClaimsOthers", "SINISTRES REGLÉS AUTRES"),
+    TOTAL_CLAIMS("totalClaims", "TOTAL SINISTRES"),
+    
+    // Soldes et acomptes
+    BROKER_DUE("brokerDue", "DÛ COURTIER"),
+    COMPANY_DUE("companyDue", "DÛ COMPAGNIE"),
+    DEPOSIT_PAID_ON("depositPaidOn", "ACOMPTE VERSÉ LE"),
+    COMPANY_DUE_BALANCE("companyDueBalance", "SOLDE DÛ COMPAGNIE");
 
-import org.apache.poi.ss.usermodel.*;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+    private final String code;
+    private final String label;
 
-import java.util.List;
-
-class ExcelUtilityTest {
-
-    private Sheet mockSheet;
-    private Row mockRow;
-    private Cell mockCell;
-    private Part3Data mockData;
-    private PartStyle mockStyle;
-    private InvoiceLine mockLine;
-
-    @BeforeEach
-    void setUp() {
-        mockSheet = mock(Sheet.class);
-        mockRow = mock(Row.class);
-        mockCell = mock(Cell.class);
-        mockStyle = mock(PartStyle.class);
-        mockData = mock(Part3Data.class);
-        mockLine = mock(InvoiceLine.class);
-
-        when(mockSheet.createRow(anyInt())).thenReturn(mockRow);
-        when(mockRow.createCell(anyInt())).thenReturn(mockCell);
-        when(mockStyle.getStyleLabelCell()).thenReturn(mock(CellStyle.class));
-        when(mockData.getInvoiceLines()).thenReturn(List.of(mockLine));
-
-        when(mockLine.getConventionPolicy()).thenReturn("POLICY1");
-        // simuler d'autres getters si nécessaire
+    InsuranceHeader(String code, String label) {
+        this.code = code;
+        this.label = label;
     }
 
-    @Test
-    void testCreatePartLines() {
-        ExcelUtility.createPartLines(mockSheet, mockData, mockStyle, 0, 10);
-
-        verify(mockSheet).createRow(0);
-        verify(mockRow, atLeastOnce()).createCell(anyInt());
-        verify(mockCell, atLeastOnce()).setCellStyle(any());
-        verify(mockCell, atLeastOnce()).setCellValue(anyString());
+    public String getCode() {
+        return code;
     }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public static Map<String, String> initHeadersMap() {
+        Map<String, String> map = new LinkedHashMap<>(); // LinkedHashMap pour conserver l'ordre
+        for (InsuranceHeader header : values()) {
+            map.put(header.getCode(), header.getLabel());
+        }
+        return map;
+    }
+
+
+public static String getLabelByCode(String code) {
+    return Arrays.stream(values())
+                 .filter(header -> header.getCode().equals(code))
+                 .findFirst()
+                 .map(InsuranceHeader::getLabel)
+                 .orElseThrow(() -> new IllegalArgumentException("Code inconnu : " + code));
 }
+}
+
+
+
