@@ -1,75 +1,49 @@
-public enum InsuranceHeader {
-    // Société et contrat
-    FINANCIAL_COMPANY("financialCompany", "SOCIÉTÉ FINANCIÈRE"),
-    GROUP_CONTRACT_NUMBER("groupContractNumber", "N° CONTRAT GROUPE"),
-    CONVENTION_OR_POLICE("conventionOrPolicy", "CONVENTION/POLICE"),
-    SUB_CONVENTION_TYPE("subConventionType", "SOUS TYPE CONVENTION"),
-    AMENDMENT("amendment", "AVENANT"),
-    MANDATE("mandate", "MANDAT"),
-    
-    // Produit et primes
-    INSURANCE_OPTION_OR_RISK("insuranceOptionOrRisk", "OPTION D'ASSURANCE / RISQUE"),
-    PRODUCT_LABEL("productLabel", "LIBELLÉ PRODUIT"),
-    PRODUCT_CODE("productCode", "CODE PRODUIT"),
-    TOTAL_PREMIUM_INCLUDING_TAX("totalPremiumIncludingTax", "TOTAL PRIME TTC"),
-    TOTAL_PREMIUM_EXCLUDING_TAX("totalPremiumExcludingTax", "TOTAL PRIME HT"),
-    TOTAL_VAT("totalVat", "TOTAL TVA"),
-    
-    // Commissions
-    NUMBER_OF_FILES("numberOfFiles", "NOMBRE DOSSIERS"),
-    UNIT_COMMISSION_PER_FILE("unitCommissionPerFile", "COMMISSION UNITAIRE PAR DOSSIER (TTC)"),
-    MANAGEMENT_COMMISSION_RATE("managementCommissionRate", "TAUX COMMISSION GESTION"),
-    MANAGEMENT_COMMISSION("managementCommission", "COMMISSION GESTION"),
-    BROKERAGE_COMMISSION_RATE("brokerageCommissionRate", "TAUX COMMISSION COURTAGE"),
-    BROKERAGE_COMMISSION("brokerageCommission", "COMMISSION COURTAGE"),
-    TOTAL_COMMISSIONS("totalCommissions", "TOTAL COMMISSIONS"),
-    
-    // Sinistres
-    SETTLED_CLAIMS_DEATH("settledClaimsDeath", "SINISTRES REGLÉS DÉCÈS"),
-    SETTLED_CLAIMS_DISABILITY("settledClaimsDisability", "SINISTRES REGLÉS INCAPACITÉ"),
-    SETTLED_CLAIMS_UNEMPLOYMENT("settledClaimsUnemployment", "SINISTRES REGLÉS CHÔMAGE"),
-    SETTLED_CLAIMS_OTHERS("settledClaimsOthers", "SINISTRES REGLÉS AUTRES"),
-    TOTAL_CLAIMS("totalClaims", "TOTAL SINISTRES"),
-    
-    // Soldes et acomptes
-    BROKER_DUE("brokerDue", "DÛ COURTIER"),
-    COMPANY_DUE("companyDue", "DÛ COMPAGNIE"),
-    DEPOSIT_PAID_ON("depositPaidOn", "ACOMPTE VERSÉ LE"),
-    COMPANY_DUE_BALANCE("companyDueBalance", "SOLDE DÛ COMPAGNIE");
+// Chemin de base configurable (à définir dans vos propriétés)
+private static final String BATCH_HOME = "/home/batch";
+private static final String INVOICES_DIR = "INVOICES";
 
-    private final String code;
-    private final String label;
+public Path saveWorkbookToBatch(Workbook workbook, String fileName) throws IOException {
+    // Création du répertoire s'il n'existe pas
+    Path batchDir = Path.of(BATCH_HOME, INVOICES_DIR);
+    Files.createDirectories(batchDir);
 
-    InsuranceHeader(String code, String label) {
-        this.code = code;
-        this.label = label;
+    // Chemin complet du fichier
+    Path filePath = batchDir.resolve(fileName);
+
+    try (OutputStream os = Files.newOutputStream(filePath)) {
+        workbook.write(os);
     }
 
-    public String getCode() {
-        return code;
-    }
-
-    public String getLabel() {
-        return label;
-    }
-
-    public static Map<String, String> initHeadersMap() {
-        Map<String, String> map = new LinkedHashMap<>(); // LinkedHashMap pour conserver l'ordre
-        for (InsuranceHeader header : values()) {
-            map.put(header.getCode(), header.getLabel());
-        }
-        return map;
-    }
-
-
-public static String getLabelByCode(String code) {
-    return Arrays.stream(values())
-                 .filter(header -> header.getCode().equals(code))
-                 .findFirst()
-                 .map(InsuranceHeader::getLabel)
-                 .orElseThrow(() -> new IllegalArgumentException("Code inconnu : " + code));
-}
+    LOG.info("Workbook saved to batch directory: {}", filePath);
+    return filePath;
 }
 
+private String uploadFileToS3(Path filePath, String keyNamePrefix) throws SdkBaseException {
+    // Vérification que le fichier existe
+    if (!Files.exists(filePath)) {
+        throw new IOException("File not found: " + filePath);
+    }
 
+    String s3Key = String.format("%s/%s/%s", 
+        INVOICES_DIR, 
+        keyNamePrefix, 
+        filePath.getFileName());
 
+    // Upload vers S3 (décommentez votre implémentation réelle)
+    // s3Client.putObject(BUCKET_NAME, s3Key, filePath.toFile());
+    
+    LOG.info("File uploaded to S3 with key: {}", s3Key);
+    return s3Key;
+}
+
+// Méthode d'intégration
+public String processInvoice(InvoiceInfo invoiceInfo) throws Exception {
+    Workbook workbook = createWorkbook(invoiceInfo);
+    String fileName = "invoice_" + System.currentTimeMillis() + ".xlsx";
+    
+    // 1. Sauvegarde locale
+    Path localPath = saveWorkbookToBatch(workbook, fileName);
+    
+    // 2. Upload S3
+    return uploadFileToS3(localPath, invoiceInfo.getClientId());
+}
