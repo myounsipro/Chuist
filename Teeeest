@@ -1,35 +1,86 @@
-import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.FillPatternType;
-import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
-import java.awt.Color;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
-class CellStyleUtilTest {
+@ExtendWith(MockitoExtension.class)
+class DateUtilsTest {
 
     @Test
-    void fillWithBleuColor_ShouldSetCorrectColorAndPattern() {
-        // Arrange
-        CellStyle cellStyle = Mockito.mock(CellStyle.class);
+    void formatDate_ShouldReturnCorrectFormat() {
+        // Given
+        LocalDate date = LocalDate.of(2023, Month.DECEMBER, 31);
         
-        // Act
-        CellStyleUtil.fillWithBleuColor(cellStyle);
+        // When
+        String result = DateUtils.formatDate(date);
         
-        // Assert
-        // Capturer l'argument XSSFColor passé à setFillForegroundColor
-        ArgumentCaptor<XSSFColor> colorCaptor = ArgumentCaptor.forClass(XSSFColor.class);
-        verify(cellStyle).setFillForegroundColor(colorCaptor.capture());
+        // Then
+        assertEquals("31/12/2023", result);
+    }
+
+    @Test
+    void formatDate_WithNull_ShouldThrowNullPointerException() {
+        assertThrows(NullPointerException.class, () -> DateUtils.formatDate(null));
+    }
+
+    @Test
+    void format_ShouldReturnCurrentDateFormatted() {
+        // Given
+        LocalDate fixedDate = LocalDate.of(2023, Month.JANUARY, 15);
+        try (MockedStatic<LocalDate> mockedLocalDate = mockStatic(LocalDate.class)) {
+            mockedLocalDate.when(LocalDate::now).thenReturn(fixedDate);
+            
+            // When
+            String result = DateUtils.format();
+            
+            // Then
+            assertEquals("15/01/2023", result);
+        }
+    }
+
+    @Test
+    void getMonthInFrench_ShouldReturnFrenchMonthName() {
+        // Given
+        String yyyyMMInput = "202305";
         
-        // Vérifier la couleur
-        XSSFColor actualColor = colorCaptor.getValue();
-        Color expectedAwtColor = new Color(221, 235, 247);
-        assertEquals(expectedAwtColor, actualColor.getColor());
+        // When
+        String result = DateUtils.getMonthInFrench(yyyyMMInput);
         
-        // Vérifier le pattern
-        verify(cellStyle).setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        // Then
+        assertEquals("mai", result.toLowerCase()); // Convert to lowercase for case-insensitive comparison
+    }
+
+    @Test
+    void getMonthInFrench_WithInvalidFormat_ShouldThrowIllegalArgumentException() {
+        // Invalid formats
+        assertThrows(IllegalArgumentException.class, () -> DateUtils.getMonthInFrench(null));
+        assertThrows(IllegalArgumentException.class, () -> DateUtils.getMonthInFrench("2023"));
+        assertThrows(IllegalArgumentException.class, () -> DateUtils.getMonthInFrench("20230515"));
+    }
+
+    @Test
+    void genInvoiceNumber_ShouldGenerateStringWithoutForbiddenCharacters() {
+        // Given
+        Instant fixedInstant = Instant.parse("2023-01-15T12:30:45Z");
+        try (MockedStatic<Instant> mockedInstant = mockStatic(Instant.class)) {
+            mockedInstant.when(Instant::now).thenReturn(fixedInstant);
+            
+            // When
+            String result = DateUtils.genInvoiceNumber();
+            
+            // Then
+            assertNotNull(result);
+            assertFalse(result.contains("T"));
+            assertFalse(result.contains("Z"));
+            assertFalse(result.contains("L"));
+            assertFalse(result.contains("S"));
+            assertFalse(result.contains("C"));
+            assertEquals("2023-01-1512:30:45", result); // After replacements
+        }
     }
 }
