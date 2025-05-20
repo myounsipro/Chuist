@@ -1,0 +1,35 @@
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.xssf.usermodel.XSSFColor;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
+import java.awt.Color;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.verify;
+
+class CellStyleUtilTest {
+
+    @Test
+    void fillWithBleuColor_ShouldSetCorrectColorAndPattern() {
+        // Arrange
+        CellStyle cellStyle = Mockito.mock(CellStyle.class);
+        
+        // Act
+        CellStyleUtil.fillWithBleuColor(cellStyle);
+        
+        // Assert
+        // Capturer l'argument XSSFColor passé à setFillForegroundColor
+        ArgumentCaptor<XSSFColor> colorCaptor = ArgumentCaptor.forClass(XSSFColor.class);
+        verify(cellStyle).setFillForegroundColor(colorCaptor.capture());
+        
+        // Vérifier la couleur
+        XSSFColor actualColor = colorCaptor.getValue();
+        Color expectedAwtColor = new Color(221, 235, 247);
+        assertEquals(expectedAwtColor, actualColor.getColor());
+        
+        // Vérifier le pattern
+        verify(cellStyle).setFillPattern(FillPatternType.SOLID_FOREGROUND);
+    }
+}
