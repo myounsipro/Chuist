@@ -1,0 +1,36 @@
+import com.amazonaws.SdkBaseException;
+import org.junit.jupiter.api.Assertions;
+
+@Test
+void shouldThrowSdkBaseExceptionWhenPutObjectFails() throws Exception {
+    // Arrange
+    File file = File.createTempFile("error-file", ".txt");
+    file.deleteOnExit();
+
+    String contentType = "text/plain";
+    String path = "error/path/file.txt";
+
+    // Simulation de l'erreur S3
+    doThrow(new SdkBaseException("S3 Error") {})
+        .when(amazonS3).putObject(any(PutObjectRequest.class));
+
+    // Act & Assert
+    Assertions.assertThrows(SdkBaseException.class, () -> {
+        cosClient.upload(file, contentType, path);
+    });
+}
+
+
+
+
+@Test
+void shouldThrowExceptionWhenFileIsNull() {
+    // Arrange
+    String contentType = "text/plain";
+    String path = "some/path/file.txt";
+
+    // Act & Assert
+    Assertions.assertThrows(NullPointerException.class, () -> {
+        cosClient.upload(null, contentType, path);
+    });
+}
