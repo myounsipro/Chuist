@@ -1,0 +1,78 @@
+
+
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+@Component
+public class InvoiceWorkbookBuilder {
+
+    private static final String SHEET_NAME = "change";
+    private static final String FONT_NAME = "Calibri";
+
+    public Workbook buildWorkbook(InvoiceInfo invoiceInfo) throws IllegalAccessException {
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet(SHEET_NAME);
+
+        part0Header(workbook, sheet, invoiceInfo);
+        part1Process(workbook, sheet, invoiceInfo.getInvoiceLines());
+        part2Process(workbook, sheet, invoiceInfo);
+        part3Process(workbook, sheet, invoiceInfo.getInvoiceLines());
+
+        return workbook;
+    }
+
+    private void part0Header(Workbook workbook, Sheet sheet, InvoiceInfo invoiceInfo) {
+        Row row = sheet.createRow(0);
+        Font font = ExcelUtility.getFont(workbook, FONT_NAME, 11, true, IndexedColors.GREEN);
+        CellStyle style = ExcelUtility.getStyle(workbook, font, true,
+                HorizontalAlignment.CENTER, VerticalAlignment.TOP, BorderStyle.THIN);
+
+        row.createCell(0).setCellValue(invoiceInfo.getInvoiceNumber());
+        row.getCell(0).setCellStyle(style);
+
+        sheet.addMergedRegion(CellRangeAddress.valueOf("A1:D1"));
+    }
+
+    private void part1Process(Workbook workbook, Sheet sheet, List<InvoiceLine> lines) throws IllegalAccessException {
+        if (lines != null && !lines.isEmpty()) {
+            double depositAddition = -100.0;
+            List<Part3Data> data = ExcelUtility.extractPart3Data(lines, depositAddition);
+            part3RenderBuilder(workbook, sheet, data);
+        }
+    }
+
+    private void part2Process(Workbook workbook, Sheet sheet, InvoiceInfo invoiceInfo) {
+        Row row = sheet.createRow(2);
+        Font font = ExcelUtility.getFont(workbook, FONT_NAME, 11, true, IndexedColors.BLACK);
+        CellStyle style = ExcelUtility.getStyle(workbook, font, true,
+                HorizontalAlignment.CENTER, VerticalAlignment.BOTTOM, null);
+
+        row.createCell(0).setCellValue("SOCIETE");
+        row.getCell(0).setCellStyle(style);
+
+        row.createCell(1).setCellValue("MOIS DE");
+        row.createCell(1).setCellStyle(style);
+
+        row.createCell(2).setCellValue("NUMERO DE FACTURE");
+        row.getCell(2).setCellStyle(style);
+
+        String formattedDate = DateUtils.formatDate(invoiceInfo.getInvoice().getInvoiceDate());
+        String invoiceLabel = invoiceInfo.getInvoice().getInvoiceDetail().toUpperCase();
+
+        row.createCell(3).setCellValue(invoiceLabel + " " + formattedDate);
+        row.getCell(3).setCellStyle(style);
+    }
+
+    private void part3RenderBuilder(Workbook workbook, Sheet sheet, List<Part3Data> dataList) {
+        for (int i = 0; i < dataList.size(); i++) {
+            Row row = sheet.createRow(4 + i);
+            Part3Data data = dataList.get(i);
+
+            row.createCell(0).setCellValue(data.getLabel());
+            row.createCell(1).setCellValue(data.getAmount());
+        }
+    }
+}
