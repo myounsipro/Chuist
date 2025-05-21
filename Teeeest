@@ -1,0 +1,82 @@
+package com.bnpp.pf.octa.batch.utility;
+
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.BasicSessionCredentials;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class CosConfigTest {
+
+    @InjectMocks
+    private CosConfig cosConfig;
+
+    @Mock
+    private CosProperties cosProperties;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        // Injecter les valeurs simulées pour @Value
+        ReflectionTestUtils.setField(cosConfig, "apiKey", "test-api-key");
+        ReflectionTestUtils.setField(cosConfig, "resourceInstanceId", "test-instance-id");
+        ReflectionTestUtils.setField(cosConfig, "serviceInstanceId", ""); // on force la branche accessKey/secretKey
+        ReflectionTestUtils.setField(cosConfig, "accessKey", "test-access-key");
+        ReflectionTestUtils.setField(cosConfig, "secretKey", "test-secret-key");
+    }
+
+    @Test
+    void testCosClientCreation() {
+        when(cosProperties.getBucketName()).thenReturn("my-bucket");
+        when(cosProperties.getEndpointUrl()).thenReturn("https://s3.eu-de.cloud-object-storage.appdomain.cloud");
+        when(cosProperties.getLocation()).thenReturn("eu-de");
+        when(cosProperties.getEndpointIAM()).thenReturn(null);
+        when(cosProperties.getProxyAddress()).thenReturn(null);
+
+        AmazonS3 client = cosConfig.cosClient(cosProperties);
+
+        assertNotNull(client);
+        // On peut également vérifier des interactions ou config spécifiques
+        verify(cosProperties, times(1)).getEndpointUrl();
+    }
+
+
+
+
+@Test
+void testCosClientCreationWithServiceInstanceId() {
+    // Injecter une valeur pour serviceInstanceId pour forcer cette branche
+    ReflectionTestUtils.setField(cosConfig, "serviceInstanceId", "my-service-instance-id");
+    ReflectionTestUtils.setField(cosConfig, "accessKey", "should-not-be-used");
+    ReflectionTestUtils.setField(cosConfig, "secretKey", "should-not-be-used");
+
+    // apiKey et resourceInstanceId seront utilisés
+    ReflectionTestUtils.setField(cosConfig, "apiKey", "test-api-key-2");
+    ReflectionTestUtils.setField(cosConfig, "resourceInstanceId", "resource-instance-id-2");
+
+    when(cosProperties.getBucketName()).thenReturn("my-bucket-2");
+    when(cosProperties.getEndpointUrl()).thenReturn("https://s3.eu-fr.cloud-object-storage.appdomain.cloud");
+    when(cosProperties.getLocation()).thenReturn("eu-fr");
+    when(cosProperties.getEndpointIAM()).thenReturn(null);
+    when(cosProperties.getProxyAddress()).thenReturn(null);
+
+    AmazonS3 client = cosConfig.cosClient(cosProperties);
+
+    assertNotNull(client);
+    verify(cosProperties).getEndpointUrl();
+}
+}
