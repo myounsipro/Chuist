@@ -1,0 +1,58 @@
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class CosPropertiesTest {
+
+    private CosProperties properties;
+
+    @BeforeEach
+    void setUp() {
+        properties = new CosProperties();
+    }
+
+    @Test
+    void shouldSetAndGetAllProperties() {
+        properties.setBucketName("bucket");
+        properties.setEndpointUrl("https://example.com");
+        properties.setStorageClass("STANDARD");
+        properties.setLocation("fr-par");
+        properties.setProxyAddress("proxy.local");
+        properties.setProxyPort(8080);
+        properties.setTimeout(3000);
+        properties.setEndpointIAM("https://iam.example.com");
+
+        assertEquals("bucket", properties.getBucketName());
+        assertEquals("https://example.com", properties.getEndpointUrl());
+        assertEquals("STANDARD", properties.getStorageClass());
+        assertEquals("fr-par", properties.getLocation());
+        assertEquals("proxy.local", properties.getProxyAddress());
+        assertEquals(8080, properties.getProxyPort());
+        assertEquals(3000, properties.getTimeout());
+        assertEquals("https://iam.example.com", properties.getEndpointIAM());
+    }
+
+    @Test
+    void shouldReturnExpectedToString() {
+        properties.setBucketName("bucket");
+        properties.setEndpointUrl("https://example.com");
+        properties.setStorageClass("STANDARD");
+        properties.setLocation("fr-par");
+        properties.setProxyAddress("proxy.local");
+        properties.setProxyPort(8080);
+        properties.setTimeout(3000);
+        properties.setEndpointIAM("https://iam.example.com");
+
+        String toString = properties.toString();
+
+        assertTrue(toString.contains("bucket"));
+        assertTrue(toString.contains("https://example.com"));
+        assertTrue(toString.contains("STANDARD"));
+        assertTrue(toString.contains("fr-par"));
+        assertTrue(toString.contains("proxy.local"));
+        assertTrue(toString.contains("8080"));
+        assertTrue(toString.contains("3000"));
+        assertTrue(toString.contains("https://iam.example.com"));
+    }
+}
