@@ -1,0 +1,92 @@
+@else {
+    <div class="portal">
+        <h1 style="font-size: larger;">hdjdjdjdjdjdjdjd</h1>
+        
+        <!-- Version et environnement en bas au centre -->
+        <div class="version-footer">
+            Version {{ appVersion }} | Environnement: {{ environmentName }}
+        </div>
+    </div>
+}
+
+
+
+
+
+.portal {
+    position: relative; /* Nécessaire pour positionner le footer */
+    width: 100%;
+    height: 100vh; /* Prend toute la hauteur de l'écran */
+    background-image: url('src/assets/img/logo.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    
+    h1 {
+        padding: 20px;
+        color: white;
+        text-align: center;
+        margin: 0;
+        padding-top: 50px; /* Espacement depuis le haut */
+    }
+
+    .version-footer {
+        position: absolute;
+        bottom: 20px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        color: white;
+        font-size: 12px;
+        background-color: rgba(0, 0, 0, 0.5); /* Fond semi-transparent */
+        padding: 8px;
+        width: fit-content;
+        margin: 0 auto;
+        border-radius: 4px;
+    }
+}
+
+
+
+
+
+import { Injectable } from '@angular/core';
+import { environment } from '../environments/environment';
+
+@Injectable({
+    providedIn: 'root'
+})
+export class AppInfoService {
+    getVersion() {
+        return environment.version; // Ajoutez 'version' dans vos environnements
+    }
+
+    getEnvironment() {
+        return environment.environmentName; // Ajoutez 'environmentName' dans vos environnements
+    }
+}
+
+
+
+
+
+export class YourComponent {
+    appVersion = this.appInfoService.getVersion();
+    environmentName = this.appInfoService.getEnvironment();
+
+    constructor(private appInfoService: AppInfoService) {}
+}
+
+
+
+
+export const environment = {
+    production: false,
+    environmentName: 'Development',
+    version: '1.0.0'
+    // ... autres configurations
+};
+
+
+
+
