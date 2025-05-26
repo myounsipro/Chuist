@@ -1,0 +1,35 @@
+public interface InvoiceDateWithProductTypes {
+    String getInvoiceDate();
+    String getProductTypes(); // Types concaténés (ex: "TYPE1,TYPE2") 
+}
+
+
+@Query(value = """
+    SELECT 
+        i.invoice_date AS invoiceDate,
+        (
+            SELECT STRING_AGG(DISTINCT sub.product_type, ',') 
+            FROM invoice_file sub 
+            WHERE sub.invoice_date = i.invoice_date
+        ) AS productTypes
+    FROM invoice_file i
+    GROUP BY i.invoice_date
+    ORDER BY i.invoice_date DESC
+    """, nativeQuery = true)
+List<InvoiceDateWithProductTypes> findDistinctDatesWithProductTypes();
+
+
+@Service
+@RequiredArgsConstructor
+public class InvoiceService {
+    private final JpaInvoiceFileRepository repository;
+
+    public Map<String, List<String>> getDatesWithProductTypes() {
+        return repository.findDistinctDatesWithProductTypes()
+            .stream()
+            .collect(Collectors.toMap(
+                InvoiceDateWithProductTypes::getInvoiceDate,
+                dto -> Arrays.asList(dto.getProductTypes().split(","))
+            );
+    }
+}
