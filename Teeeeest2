@@ -1,0 +1,57 @@
+Private WithEvents inboxItems As Outlook.Items
+Private Const SAVE_FOLDER As String = "C:\Users\VotreNom\Documents\PDFs" ' <-- Modifie le chemin ici
+Private Const ALLOWED_SENDERS As String = "factures@exemple.com;compta@entreprise.fr" ' <-- Modifie les emails
+
+Private Sub Application_Startup()
+    Dim outlookNamespace As Outlook.NameSpace
+    Set outlookNamespace = Application.GetNamespace("MAPI")
+    
+    Dim inbox As Outlook.MAPIFolder
+    Set inbox = outlookNamespace.GetDefaultFolder(olFolderInbox)
+    
+    Set inboxItems = inbox.Items
+End Sub
+
+Private Sub inboxItems_ItemAdd(ByVal Item As Object)
+    On Error Resume Next
+    If Item.Class = olMail Then
+        Dim mail As Outlook.MailItem
+        Set mail = Item
+
+        If IsSenderAllowed(mail.SenderEmailAddress) Then
+            SavePdfAttachments mail
+        End If
+    End If
+End Sub
+
+Private Function IsSenderAllowed(sender As String) As Boolean
+    Dim allowedList As Variant
+    allowedList = Split(ALLOWED_SENDERS, ";")
+    
+    Dim s As Variant
+    For Each s In allowedList
+        If LCase(Trim(sender)) = LCase(Trim(s)) Then
+            IsSenderAllowed = True
+            Exit Function
+        End If
+    Next
+    IsSenderAllowed = False
+End Function
+
+Private Sub SavePdfAttachments(mail As Outlook.MailItem)
+    Dim att As Attachment
+    For Each att In mail.Attachments
+        If LCase(Right(att.FileName, 4)) = ".pdf" Then
+            att.SaveAsFile SAVE_FOLDER & "\" & att.FileName
+        End If
+    Next
+End Sub
+
+
+
+
+
+Public Sub InitHandler()
+    Call Application_Startup
+    MsgBox "Surveillance des emails activée avec filtre d'expéditeur."
+End Sub
