@@ -50,7 +50,6 @@ End Sub
 
 
 
-
 Public Sub InitHandler()
     Call Application_Startup
     MsgBox "Surveillance des emails activée avec filtre d'expéditeur."
