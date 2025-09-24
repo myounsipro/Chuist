@@ -1,0 +1,152 @@
+# Désactiver l'ingress principal
+ingress:
+  enabled: false
+
+# Définir les deux ingress séparés
+frontendIngress:
+  enabled: true
+  name: {{ .Chart.Name }}-frontend
+  annotations:
+    kubernetes.io/ingress.class: private-4ks-k8s-nginx
+    nginx.ingress.kubernetes.io/fonce-sst-redirect: "false"
+    nginx.ingress.kubernetes.io/sst-passthrough: "false"
+  
+  hosts:
+    - host: octa-ui.pf.dev.echonet
+      paths:
+        - "/"
+  
+  backend:
+    serviceName: dev-octa-web-umbrella-octa-web-front
+    servicePort: 443
+  
+  tls:
+    - secretName: ingress-certificate-v2
+      hosts:
+        - octa-ui.pf.dev.echonet
+
+backendIngress:
+  enabled: true
+  name: {{ .Chart.Name }}-backend
+  annotations:
+    kubernetes.io/ingress.class: private-4ks-k8s-nginx
+    nginx.ingress.kubernetes.io/fonce-sst-redirect: "false"
+    nginx.ingress.kubernetes.io/sst-passthrough: "false"
+  
+  hosts:
+    - host: octa-ui.pf.dev.echonet
+      paths:
+        - "/api"
+  
+  backend:
+    serviceName: dev-octa-web-umbrella-backend
+    servicePort: 443
+  
+  tls:
+    - secretName: ingress-certificate-v2
+      hosts:
+        - octa-ui.pf.dev.echonet
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 443
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{{- if .Values.frontendIngress.enabled -}}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {{ .Values.frontendIngress.name | default (printf "%s-frontend" (include "common.names.fullname" .)) }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+  {{- with .Values.frontendIngress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.frontendIngress.tls }}
+  tls:
+    {{- range .Values.frontendIngress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.frontendIngress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ . }}
+            backend:
+              serviceName: {{ $.Values.frontendIngress.backend.serviceName }}
+              servicePort: {{ $.Values.frontendIngress.backend.servicePort }}
+          {{- end }}
+    {{- end }}
+{{- end }}
+
+
+
+
+
+
+
+
+
+{{- if .Values.backendIngress.enabled -}}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {{ .Values.backendIngress.name | default (printf "%s-backend" (include "common.names.fullname" .)) }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+  {{- with .Values.backendIngress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.backendIngress.tls }}
+  tls:
+    {{- range .Values.backendIngress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.backendIngress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ . }}
+            backend:
+              serviceName: {{ $.Values.backendIngress.backend.serviceName }}
+              servicePort: {{ $.Values.backendIngress.backend.servicePort }}
+          {{- end }}
+    {{- end }}
+{{- end }}
