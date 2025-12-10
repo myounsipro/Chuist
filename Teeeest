@@ -1,0 +1,145 @@
+<mat-sidenav-container class="app-container">
+  <!-- SIDENAV -->
+  <mat-sidenav
+    #drawer
+    mode="side"
+    [opened]="true"
+    class="app-sidenav"
+  >
+    <div class="logo">
+      <img src="assets/logo.svg" alt="Logo" />
+    </div>
+
+    <mat-nav-list>
+      <a mat-list-item routerLink="/dashboard">Dashboard</a>
+      <a mat-list-item routerLink="/sessions">Sessions</a>
+      <a mat-list-item routerLink="/jobs">Jobs</a>
+      <a mat-list-item routerLink="/settings">Settings</a>
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <!-- MAIN CONTENT -->
+  <mat-sidenav-content>
+    <!-- TOP BAR -->
+    <mat-toolbar color="transparent" class="topbar">
+      <button mat-icon-button (click)="drawer.toggle()" class="menu-button">
+        <mat-icon>menu</mat-icon>
+      </button>
+
+      <span class="title">Eureka</span>
+
+      <span class="spacer"></span>
+
+      <button mat-icon-button>
+        <mat-icon>notifications</mat-icon>
+      </button>
+      <button mat-icon-button>
+        <mat-icon>account_circle</mat-icon>
+      </button>
+    </mat-toolbar>
+
+    <!-- PAGE CONTENT -->
+    <div class="content">
+      <router-outlet />
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>
+
+
+
+
+import { Component, signal } from '@angular/core';
+import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatIconModule } from '@angular/material/icon';
+import { MatListModule } from '@angular/material/list';
+import { RouterModule } from '@angular/router';
+
+@Component({
+  selector: 'app-layout',
+  standalone: true,
+  imports: [
+    MatSidenavModule,
+    MatToolbarModule,
+    MatIconModule,
+    MatListModule,
+    RouterModule,
+  ],
+  templateUrl: './layout.component.html',
+  styleUrl: './layout.component.scss'
+})
+export class LayoutComponent {
+
+  isMobile = signal(false);
+
+  constructor() {
+    const mediaQuery = window.matchMedia('(max-width: 900px)');
+    this.isMobile.set(mediaQuery.matches);
+    mediaQuery.addEventListener('change', e => this.isMobile.set(e.matches));
+  }
+}
+
+
+
+
+
+
+
+
+.app-container {
+  height: 100vh;
+  background: #f8f9fa;
+}
+
+.app-sidenav {
+  width: 250px;
+  background: white;
+  border-right: 1px solid #e5e5e5;
+
+  .logo {
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+
+    img {
+      width: 140px;
+    }
+  }
+
+  mat-nav-list a {
+    font-size: 14px;
+    color: #555;
+  }
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #e5e5e5;
+
+  .title {
+    font-size: 20px;
+    font-weight: 500;
+  }
+
+  .spacer {
+    flex: 1 1 auto;
+  }
+}
+
+.content {
+  padding: 24px;
+  height: calc(100vh - 64px);
+  overflow-y: auto;
+}
+
+/* Scrollbar fine */
+.content::-webkit-scrollbar {
+  width: 6px;
+}
+.content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
